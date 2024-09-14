@@ -8,9 +8,6 @@
 __pycache__/
 *.so
 
-# Environment variables
-instance/.env
-
 # Flask-specific
 logs/
 *.log
