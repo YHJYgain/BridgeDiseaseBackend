@@ -1,0 +1,41 @@
+# IDE specific
+.idea/
+
+# Python bytecode
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+
+# Environment variables
+instance/.env
+
+# Flask-specific
+logs/
+*.log
+
+# Database files
+*.sqlite
+
+# Test coverage and Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
