@@ -1,7 +1,7 @@
 from flask import Blueprint
 
 # 创建蓝图
-auth = Blueprint('auth', __name__)
+user = Blueprint('user', __name__, url_prefix='/user')
 
 # 导入视图函数
-from . import auth as auth_routes
+from . import user as user_routes

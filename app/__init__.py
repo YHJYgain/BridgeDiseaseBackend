@@ -1,11 +1,13 @@
-from dotenv import load_dotenv
 import os
 from datetime import datetime
 from logging.config import dictConfig
+
+from dotenv import load_dotenv
 from flask import Flask
+
 from instance.config import Config
-from .models import db
-from .routes import auth
+from models import db
+from routes import user
 
 # 加载环境变量
 load_dotenv()
@@ -64,13 +66,11 @@ def register_blueprints(app):
     """
     注册所有蓝图到 Flask 应用中。
 
-    目前注册了 `auth` 蓝图。如果有其他蓝图需要注册，可以在此函数中添加相应的代码。
-
     :param app: Flask 应用实例
     :type app: Flask
     :return: None
     """
-    app.register_blueprint(auth)
+    app.register_blueprint(user)
 
 
 def create_app():
