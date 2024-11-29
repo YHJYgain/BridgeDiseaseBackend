@@ -2,15 +2,12 @@ import os
 from datetime import datetime
 from logging.config import dictConfig
 
-from dotenv import load_dotenv
 from flask import Flask
 
-from instance.config import Config
-from models import db
-from routes import user
-
-# 加载环境变量
-load_dotenv()
+from .config import Config
+from .models import db, init_db
+from .models.user import User
+from .routes import register_routes
 
 
 def configure_logging():
@@ -62,42 +59,26 @@ def configure_logging():
     })
 
 
-def register_blueprints(app):
-    """
-    注册所有蓝图到 Flask 应用中。
-
-    :param app: Flask 应用实例
-    :type app: Flask
-    :return: None
-    """
-    app.register_blueprint(user)
-
-
 def create_app():
     """
     创建和配置 Flask 应用实例。
-
-    - 配置日志记录
-    - 从配置对象加载应用配置
-    - 注册蓝图
-    - 初始化数据库
 
     :return: 配置好的 Flask 应用实例
     :rtype: Flask
     """
     app = Flask(__name__, instance_relative_config=True)
+
     # 配置日志记录
     configure_logging()
+
     # 加载配置
     app.config.from_object(Config)
-    # 注册蓝图
-    register_blueprints(app)
     app.logger.info(f'初始化服务配置：{dict(app.config)}')
 
-    # 初始化 MySQL 数据库
-    db.init_app(app)
-    app.logger.info('初始化 MySQL 数据库。')
+    # 初始化数据库
+    init_db(app)
 
-    app.logger.info('桥梁病害系统后端服务开始运行。')
+    # 注册蓝图
+    register_routes(app)
 
     return app
