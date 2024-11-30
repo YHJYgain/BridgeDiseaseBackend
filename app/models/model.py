@@ -1,0 +1,26 @@
+from datetime import datetime
+
+from . import db
+
+
+class Model(db.Model):
+    __tablename__ = 'model'  # 表名
+
+    model_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 模型 ID
+    model_name = db.Column(db.String(255), unique=True, nullable=False)  # 模型名称
+    augmentation = db.Column(db.String(255))  # 数据增强方式
+    layers = db.Column(db.Integer)  # 模型层数
+    parameters = db.Column(db.Integer)  # 模型参数数量
+    GFLOPs = db.Column(db.Float)  # 计算量
+    box_p = db.Column(db.Float)  # 目标检测框的精度
+    box_r = db.Column(db.Float)  # 目标检测框的召回率
+    box_mAP50 = db.Column(db.Float)  # 目标检测框在 IoU=0.5 时的 mAP
+    box_mAP50_95 = db.Column(db.Float)  # 目标检测框在 IoU 从 0.5 到 0.95 的 mAP
+    mask_p = db.Column(db.Float)  # 分割掩膜的精度
+    mask_r = db.Column(db.Float)  # 分割掩膜的召回率
+    mask_mAP50 = db.Column(db.Float)  # 分割掩膜在 IoU=0.5 时的 mAP
+    mask_mAP50_95 = db.Column(db.Float)  # 分割掩膜在 IoU 从 0.5 到 0.95 的 mAP
+    fitness_score = db.Column(db.Float)  # 模型适应度分数
+    f1_score = db.Column(db.Float)  # 模型的 F1 分数
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 模型创建时间
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 模型最后更新时间
