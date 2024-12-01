@@ -6,7 +6,7 @@ from . import db
 class User(db.Model):
     __tablename__ = 'user'  # 表名
 
-    user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 用户ID
+    user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 用户 ID
     username = db.Column(db.String(255), unique=True, nullable=False)  # 用户名，唯一
     email = db.Column(db.String(255), unique=True, nullable=False)  # 用户邮箱，唯一
     password = db.Column(db.String(255), nullable=False)  # 加密后的密码

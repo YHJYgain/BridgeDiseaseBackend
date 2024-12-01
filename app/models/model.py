@@ -9,6 +9,7 @@ class Model(db.Model):
     model_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 模型 ID
     model_name = db.Column(db.String(255), unique=True, nullable=False)  # 模型名称
     augmentation = db.Column(db.String(255))  # 数据增强方式
+    disease_category = db.Column(db.String(100))  # 病害类别（如裂缝、腐蚀等）
     layers = db.Column(db.Integer)  # 模型层数
     parameters = db.Column(db.Integer)  # 模型参数数量
     GFLOPs = db.Column(db.Float)  # 计算量
