@@ -21,7 +21,7 @@ class User(db.Model):
     phone = db.Column(db.String(20), unique=True)  # 手机号
     last_login = db.Column(db.DateTime)  # 最后登录时间
     status = db.Column(db.Enum('active', 'inactive', 'banned', name='user_status'), default='active',
-                       nullable=False)  # 用户状态
+                       nullable=False)  # 用户状态（在线、离线、封禁）
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 用户创建时间
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 最后更新时间
 
