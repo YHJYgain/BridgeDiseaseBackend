@@ -6,7 +6,11 @@ user_routes = Blueprint('user', __name__, url_prefix='/user')
 
 def register_routes(app):
     """
-    注册所有蓝图到 Flask 应用中。
+    将所有的蓝图注册到 Flask 应用中。
+
+    该函数用于将定义的蓝图（例如 user_routes）与 Flask 应用绑定，
+    使得在应用中能够通过指定的 URL 前缀访问相关视图函数。
+
     :param app: Flask 应用实例
     :type app: Flask
     :return: None
