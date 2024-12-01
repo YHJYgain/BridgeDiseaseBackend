@@ -2,6 +2,7 @@ from flask import Blueprint
 
 # 创建蓝图
 user_routes = Blueprint('user', __name__, url_prefix='/user')
+model_routes = Blueprint('model', __name__, url_prefix='/model')
 
 
 def register_routes(app):
@@ -17,6 +18,7 @@ def register_routes(app):
     """
     # 注册蓝图
     app.register_blueprint(user_routes)
+    app.register_blueprint(model_routes)
 
 
 from .user import *
