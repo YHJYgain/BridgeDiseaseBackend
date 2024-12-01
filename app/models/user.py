@@ -25,5 +25,7 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 用户创建时间
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 最后更新时间
 
+    # 反向关系: 一个用户可以有多个模型
+    models = db.relationship('Model', backref='owner', lazy=True)
     # 反向关系: 一个用户有多个媒体文件
     medias = db.relationship('Media', backref='owner', lazy=True)

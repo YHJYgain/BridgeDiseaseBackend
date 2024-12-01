@@ -4,6 +4,10 @@ from . import db
 
 
 class Media(db.Model):
+    """
+    媒体模型类，表示数据库中的 'media' 表。
+    存储与用户相关联的媒体文件的基本信息，如文件名、路径、文件类型等。
+    """
     __tablename__ = 'media'
 
     media_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 媒体记录 ID
