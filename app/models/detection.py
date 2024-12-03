@@ -40,7 +40,7 @@ class Detection(db.Model):
     """
     __tablename__ = 'detection'
 
-    detection_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 记录 ID
+    detection_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 检测分割记录 ID
     raw_detection_result = db.Column(db.Text)  # 检测原始结果（JSON 格式）
     raw_segmentation_result = db.Column(db.Text)  # 分割原始结果（JSON 格式）
     result_image_path = db.Column(db.String(255))  # 检测分割结果图路径
