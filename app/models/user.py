@@ -31,3 +31,5 @@ class User(db.Model):
     medias = db.relationship('Media', backref='owner', lazy=True)
     # 反向关系：一个用户可以有多个检测分割记录
     detections = db.relationship('Detection', backref='owner', lazy=True)
+    # 反向关系：一个用户可以有多个操作日志
+    operation_logs = db.relationship('OperationLog', backref='owner', lazy=True)
