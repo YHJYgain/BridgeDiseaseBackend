@@ -5,8 +5,27 @@ from . import db
 
 class Media(db.Model):
     """
-    媒体模型类，表示数据库中的 'media' 表。
-    存储与用户相关联的媒体文件的基本信息，如文件名、路径、文件类型等。
+    影像模型类，表示数据库中的 'media' 表。
+
+    该类存储与用户相关联的媒体文件的基本信息，如文件名、路径、文件类型、分辨率等。
+    影像文件可以是图片或视频，并关联到检测任务记录。每个文件只能属于一个用户，且可进行状态管理。
+
+    Attributes:
+        media_id (int): 媒体文件的唯一标识符（主键）。
+        file_name (str): 媒体文件的文件名，不能为空。
+        file_path (str): 媒体文件的存储路径，不能为空。
+        description (str): 媒体文件的描述信息（可选）。
+        file_size (int): 媒体文件的大小（字节）。
+        file_type (str): 媒体文件的类型，通常为图片或视频。
+        resolution_width (int): 媒体文件的宽度（像素）。
+        resolution_height (int): 媒体文件的高度（像素）。
+        upload_time (datetime): 媒体文件的上传时间，默认为当前时间。
+        status (str): 媒体文件的状态（待处理或已处理）。
+        owner_id (int): 所属用户的唯一标识符（外键）。
+
+    Relationships:
+        owner (User): 一个媒体文件只属于一个用户（反向关系），表示该文件的所有者。
+        detections (Detection): 一个媒体文件可以有多个检测分割记录（一个对多关系），表示该文件参与的所有检测任务。
     """
     __tablename__ = 'media'
 

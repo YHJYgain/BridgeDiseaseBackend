@@ -5,8 +5,38 @@ from . import db
 
 class Detection(db.Model):
     """
-    检测分割记录表，表示数据库中的 'detection' 表。
-    存储检测分割任务的状态、结果图像、分析数据及其病害评估信息。
+    检测分割记录类，表示数据库中的 'detection' 表。
+
+    每一条记录对应一次检测任务，包含检测及分割的原始结果，处理后的结果图像，
+    以及与检测任务相关的各类统计信息（如病害数量、面积、形状复杂度等）及评估描述。
+
+    Attributes:
+        detection_id (int): 检测记录的唯一标识符（主键）。
+        raw_detection_result (str): 检测原始结果，以 JSON 格式存储。
+        raw_segmentation_result (str): 分割原始结果，以 JSON 格式存储。
+        result_image_path (str): 检测和分割的结果图像存储路径。
+        cropped_image_path (str): 裁剪后结果图像存储路径。
+        disease_count (int): 病害的数量。
+        disease_perimeter (float): 病害的周长。
+        disease_area (float): 病害的面积。
+        shape_complexity (float): 病害形状的复杂度。
+        texture_roughness (float): 病害的纹理粗糙度。
+        crack_width (float): 裂缝的宽度（适用于裂缝病害）。
+        avg_hue (float): 病害的平均色调（适用于锈蚀等病害）。
+        disease_grade (str): 病害的评估等级，使用枚举类型（'mild', 'moderate', 'severe', 'critical'）。
+        disease_description (str): 病害评估的描述信息。
+        detection_time (datetime): 检测任务执行的时间。
+        status (str): 任务状态，使用枚举类型（'pending', 'in_progress', 'completed', 'failed'）。
+        created_at (datetime): 记录创建时间，自动生成。
+        updated_at (datetime): 记录最后更新时间，自动更新。
+        owner_id (int): 执行该检测任务的用户 ID（外键）。
+        model_id (int): 使用的模型 ID（外键）。
+        media_id (int): 使用的影像文件 ID（外键）。
+
+    Relationships:
+        owner (User): 每条检测记录关联一个用户，表示该任务由哪个用户执行。
+        model (Model): 每条记录关联一个模型，表示该任务使用的模型。
+        media (Media): 每条记录关联一个影像文件，表示该任务使用的影像。
     """
     __tablename__ = 'detection'
 

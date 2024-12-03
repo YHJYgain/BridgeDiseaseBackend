@@ -5,7 +5,8 @@ from . import db
 
 class OperationLog(db.Model):
     """
-    操作日志类，用于记录系统中所有操作的日志信息。
+    操作日志模型类，表示数据库中的 'operation_log' 表。
+
     包括操作类型、描述、耗时、状态、用户信息等，用于系统的审计、监控和分析。
 
     Attributes:
