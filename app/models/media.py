@@ -18,10 +18,13 @@ class Media(db.Model):
     file_type = db.Column(db.String(50))  # 文件类型（图片或视频）
     resolution_width = db.Column(db.Integer)  # 分辨率宽度
     resolution_height = db.Column(db.Integer)  # 分辨率高度
+    upload_time = db.Column(db.DateTime, default=datetime.utcnow)  # 上传时间
     status = db.Column(db.Enum('pending', 'processed', name='media_status'), default='pending',
                        nullable=False)  # 文件状态（待处理，已处理）
-    upload_time = db.Column(db.DateTime, default=datetime.utcnow)  # 上传时间
     owner_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)  # 所属用户 ID（外键）
 
-    # 设置与 User 表的关系
+    # 设置与 User 表的关系：一份影像文件只属于一个用户
     owner = db.relationship('User', backref=db.backref('medias', lazy=True))
+
+    # 反向关系：一个影像可以有多个检测分割记录
+    detections = db.relationship('Detection', backref='media', lazy=True)

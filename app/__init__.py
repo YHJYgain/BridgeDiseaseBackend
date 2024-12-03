@@ -6,6 +6,7 @@ from flask import Flask
 
 from .config import Config
 from .models import db, init_db
+from .models.detection import Detection
 from .models.media import Media
 from .models.model import Model
 from .models.user import User
