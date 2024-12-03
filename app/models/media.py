@@ -20,7 +20,6 @@ class Media(db.Model):
         resolution_width (int): 媒体文件的宽度（像素）。
         resolution_height (int): 媒体文件的高度（像素）。
         upload_time (datetime): 媒体文件的上传时间，默认为当前时间。
-        status (str): 媒体文件的状态（待处理或已处理）。
         owner_id (int): 所属用户的唯一标识符（外键）。
 
     Relationships:
@@ -38,8 +37,6 @@ class Media(db.Model):
     resolution_width = db.Column(db.Integer)  # 分辨率宽度
     resolution_height = db.Column(db.Integer)  # 分辨率高度
     upload_time = db.Column(db.DateTime, default=datetime.utcnow)  # 上传时间
-    status = db.Column(db.Enum('pending', 'processed', name='media_status'), default='pending',
-                       nullable=False)  # 文件状态（待处理，已处理）
     owner_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)  # 所属用户 ID（外键）
 
     # 设置与 User 表的关系：一份影像文件只属于一个用户
