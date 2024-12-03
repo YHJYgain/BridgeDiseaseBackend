@@ -9,7 +9,7 @@ from .models import db, init_db
 from .models.detection import Detection
 from .models.media import Media
 from .models.model import Model
-from .models.operation_log import OperationLog
+from .models.operation import Operation
 from .models.user import User
 from .routes import register_routes
 

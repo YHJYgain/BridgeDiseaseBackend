@@ -32,7 +32,7 @@ class Media(db.Model):
     media_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 媒体记录 ID
     file_name = db.Column(db.String(255), nullable=False)  # 文件名
     file_path = db.Column(db.String(255), nullable=False)  # 文件路径
-    description = db.Column(db.Text)  # 描述
+    description = db.Column(db.Text)  # 影像描述
     file_size = db.Column(db.Integer)  # 文件大小（字节）
     file_type = db.Column(db.String(50))  # 文件类型（图片或视频）
     resolution_width = db.Column(db.Integer)  # 分辨率宽度
