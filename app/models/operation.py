@@ -29,14 +29,14 @@ class Operation(db.Model):
     operation_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 操作记录 ID
     operation_type = db.Column(
         db.Enum('authenticate', 'create', 'read', 'update', 'delete', 'execute', 'manage', name='operation_types'),
-        default='read', nullable=False)  # 操作类型
+        default='read', nullable=False)  # 操作类型（鉴权，创建，读取，更新，删除，执行任务，管理）
     description = db.Column(db.Text)  # 操作描述
     duration = db.Column(db.Float)  # 操作耗时（s）
     failure_message = db.Column(db.Text)  # 失败信息
     ip_address = db.Column(db.String(45))  # IP 地址
     device_info = db.Column(db.String(255))  # 设备信息
     status = db.Column(db.Enum('success', 'failure', name='operation_status'), default='success',
-                       nullable=False)  # 操作状态
+                       nullable=False)  # 操作状态（成功，失败）
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 操作时间
     owner_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)  # 用户 ID（外键）
 

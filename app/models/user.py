@@ -40,7 +40,8 @@ class User(db.Model):
     password = db.Column(db.String(255), nullable=False)  # 密码（加密）
     first_name = db.Column(db.String(100))  # 名字
     last_name = db.Column(db.String(100))  # 姓氏
-    role = db.Column(db.Enum('admin', 'developer', 'user', name='user_roles'), default='user', nullable=False)  # 角色
+    role = db.Column(db.Enum('admin', 'developer', 'user', name='user_roles'), default='user',
+                     nullable=False)  # 角色（管理员，开发人员，普通用户）
     avatar_path = db.Column(db.String(255))  # 头像路径
     phone = db.Column(db.String(20), unique=True)  # 手机号
     last_login = db.Column(db.DateTime)  # 最后登录时间

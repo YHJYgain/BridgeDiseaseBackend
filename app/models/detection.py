@@ -53,11 +53,11 @@ class Detection(db.Model):
     crack_width = db.Column(db.Float)  # 裂缝宽度（适用裂缝等）
     avg_hue = db.Column(db.Float)  # 平均色调（适用锈蚀等）
     disease_grade = db.Column(db.Enum('mild', 'moderate', 'severe', 'critical'), default='mild',
-                              nullable=False)  # 病害评估等级
+                              nullable=False)  # 病害评估等级（轻度，中度，重度，严重）
     disease_description = db.Column(db.Text)  # 病害评估描述
     detection_time = db.Column(db.DateTime)  # 检测时间
     status = db.Column(db.Enum('pending', 'in_progress', 'completed', 'failed', name='task_status'),
-                       default='pending', nullable=False)  # 任务状态
+                       default='pending', nullable=False)  # 任务状态（待处理，检测中，已完成，检测失败）
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 最后更新时间
     owner_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)  # 所属用户 ID（外键）
