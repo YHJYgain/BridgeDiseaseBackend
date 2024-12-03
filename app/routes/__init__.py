@@ -4,6 +4,7 @@ from flask import Blueprint
 user_routes = Blueprint('user', __name__, url_prefix='/user')
 model_routes = Blueprint('model', __name__, url_prefix='/model')
 media_routes = Blueprint('media', __name__, url_prefix='/media')
+detection_routes = Blueprint('detection', __name__, url_prefix='/detection')
 
 
 def register_routes(app):
@@ -21,6 +22,7 @@ def register_routes(app):
     app.register_blueprint(user_routes)
     app.register_blueprint(model_routes)
     app.register_blueprint(media_routes)
+    app.register_blueprint(detection_routes)
 
 
 from .user import *
