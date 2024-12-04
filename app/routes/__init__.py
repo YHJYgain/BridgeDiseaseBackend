@@ -28,3 +28,7 @@ def register_routes(app):
 
 
 from .user import *
+from .model import *
+from .media import *
+from .detection import *
+from .operation import *
