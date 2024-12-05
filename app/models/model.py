@@ -63,6 +63,3 @@ class Model(db.Model):
 
     # 设置与 User 表的关系：一个模型只属于一个用户
     owner = db.relationship('User', backref=db.backref('models', lazy=True))
-
-    # 反向关系：一个模型可以有多个检测分割记录
-    detections = db.relationship('Detection', backref='model', lazy=True)

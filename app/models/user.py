@@ -45,16 +45,7 @@ class User(db.Model):
     avatar_path = db.Column(db.String(255))  # 头像路径
     phone = db.Column(db.String(20), unique=True)  # 手机号
     last_login = db.Column(db.DateTime)  # 最后登录时间
-    status = db.Column(db.Enum('active', 'inactive', 'banned', name='user_status'), default='active',
+    status = db.Column(db.Enum('active', 'inactive', 'banned', name='user_status'), default='inactive',
                        nullable=False)  # 用户状态（在线、离线、封禁）
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 用户创建时间
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 最后更新时间
-
-    # 反向关系：一个用户可以有多个模型
-    models = db.relationship('Model', backref='owner', lazy=True)
-    # 反向关系：一个用户可以有多个影像文件
-    medias = db.relationship('Media', backref='owner', lazy=True)
-    # 反向关系：一个用户可以有多个检测分割记录
-    detections = db.relationship('Detection', backref='owner', lazy=True)
-    # 反向关系：一个用户可以有多个操作记录
-    operations = db.relationship('Operation', backref='owner', lazy=True)

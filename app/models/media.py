@@ -41,6 +41,3 @@ class Media(db.Model):
 
     # 设置与 User 表的关系：一份影像文件只属于一个用户
     owner = db.relationship('User', backref=db.backref('medias', lazy=True))
-
-    # 反向关系：一个影像可以有多个检测分割记录
-    detections = db.relationship('Detection', backref='media', lazy=True)
