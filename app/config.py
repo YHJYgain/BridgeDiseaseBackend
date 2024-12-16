@@ -8,3 +8,4 @@ class Config:
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
     AVATAR_FOLDER = os.path.join(os.getcwd(), 'app', 'static', 'avatars')  # 头像存储的文件夹路径
     MAX_AVATAR_SIZE = 5 * 1024 * 1024  # 最大头像文件大小：5MB
+    JWT_SECRET_KEY = 'WZY'  # 为 JWT 设置一个密钥

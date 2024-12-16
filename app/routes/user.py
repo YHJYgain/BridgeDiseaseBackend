@@ -1,8 +1,10 @@
 import os
 import re
+from datetime import datetime
 
 from flask import request, jsonify, current_app
-from werkzeug.security import generate_password_hash
+from flask_jwt_extended import create_access_token
+from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 from . import user_routes
@@ -126,7 +128,7 @@ def register():
         last_name=last_name,
         role=role,
         avatar_path=avatar_path,
-        phone=phone
+        phone=phone,
     )
 
     # 添加到数据库
@@ -147,10 +149,80 @@ def register():
         'last_name': new_user.last_name,
         'role': new_user.role,
         'avatar_path': new_user.avatar_path,
-        'phone': new_user.phone
+        'phone': new_user.phone,
+        'status': new_user.status,
     }
 
     return jsonify({'message': '用户注册成功', 'user': user_data}), 201
+
+
+@user_routes.route('/login', methods=['POST'])
+def login():
+    """
+    用户登录接口，处理用户的登录逻辑。
+
+    登录流程：
+    1. 校验必填字段（用户名或邮箱、密码）。
+    2. 检查用户名或邮箱是否存在，并且密码是否正确。
+    3. 如果登录成功，生成 JWT 令牌。
+    4. 更新用户的最后登录时间和状态。
+    5. 返回包含登录成功消息和 JWT 令牌的响应。
+
+    :return: 返回包含登录结果的 JSON 响应。
+    :rtype: flask.Response
+    """
+    # 获取请求中的表单数据
+    username_or_email = request.form.get('username_or_email')
+    password = request.form.get('password')
+
+    # 校验必填字段
+    if not username_or_email or not password:
+        current_app.logger.warning(f"登录失败：用户名、邮箱或密码为空：{request.form}")
+        return jsonify({'message': '登录失败：用户名或邮箱和密码是必填项'}), 400
+
+    try:
+        # 根据用户名或邮箱查找用户
+        user = User.query.filter((User.username == username_or_email) | (User.email == username_or_email)).first()
+
+        # 用户不存在
+        if not user:
+            current_app.logger.warning(f"登录失败：用户 {username_or_email} 不存在")
+            return jsonify({'message': '登录失败：用户不存在', 'username_or_email': username_or_email}), 400
+
+        # 验证密码
+        if not check_password_hash(user.password, password):
+            current_app.logger.warning(f"登录失败：用户 {username_or_email} 密码错误")
+            return jsonify({'message': '登录失败：密码错误', 'username_or_email': username_or_email}), 400
+
+        # 更新用户的最后登录时间和状态
+        user.last_login = datetime.utcnow()
+        user.status = 'active'
+
+        # 提交更新到数据库
+        db.session.commit()
+
+        # 创建 JWT 令牌
+        access_token = create_access_token(identity=user.user_id)
+
+        current_app.logger.info(f"用户 {username_or_email} 登录成功，生成了 JWT 令牌：{access_token}")
+
+        user_data = {
+            'id': user.user_id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'role': user.role,
+            'avatar_path': user.avatar_path,
+            'phone': user.phone,
+            'last_login': user.last_login,
+            'status': user.status,
+        }
+
+        return jsonify({'message': '登录成功', 'access_token': access_token, 'user': user_data}), 200
+    except Exception as e:
+        current_app.logger.error(f"登录失败，出现异常：{str(e)}")
+        return jsonify({'message': '登录失败，请稍后重试'}), 500
 
 
 def allowed_file(filename):
