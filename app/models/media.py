@@ -1,4 +1,5 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from . import db
 
@@ -36,7 +37,7 @@ class Media(db.Model):
     file_type = db.Column(db.String(50))  # 文件类型（图片或视频）
     resolution_width = db.Column(db.Integer)  # 分辨率宽度
     resolution_height = db.Column(db.Integer)  # 分辨率高度
-    upload_time = db.Column(db.DateTime, default=datetime.utcnow)  # 上传时间
+    upload_time = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 上传时间
     owner_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)  # 所属用户 ID（外键）
 
     # 设置与 User 表的关系：一份影像文件只属于一个用户

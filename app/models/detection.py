@@ -1,4 +1,5 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from . import db
 
@@ -58,8 +59,9 @@ class Detection(db.Model):
     detection_time = db.Column(db.DateTime)  # 检测时间
     status = db.Column(db.Enum('pending', 'in_progress', 'completed', 'failed', name='task_status'),
                        default='pending', nullable=False)  # 任务状态（待处理，检测中，已完成，检测失败）
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 创建时间
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 最后更新时间
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 创建时间
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")),
+                           onupdate=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 最后更新时间
     owner_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)  # 所属用户 ID（外键）
     model_id = db.Column(db.Integer, db.ForeignKey('model.model_id'), nullable=False)  # 使用模型 ID（外键）
     media_id = db.Column(db.Integer, db.ForeignKey('media.media_id'), nullable=False)  # 使用影像 ID（外键）

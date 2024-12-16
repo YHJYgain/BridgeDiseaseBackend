@@ -1,4 +1,5 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from . import db
 
@@ -37,7 +38,7 @@ class Operation(db.Model):
     device_info = db.Column(db.String(255))  # 设备信息
     status = db.Column(db.Enum('success', 'failure', name='operation_status'), default='success',
                        nullable=False)  # 操作状态（成功，失败）
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 操作时间
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 操作时间
     owner_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)  # 所属用户 ID（外键）
 
     # 设置与 User 的关系：一个操作记录只属于一个用户

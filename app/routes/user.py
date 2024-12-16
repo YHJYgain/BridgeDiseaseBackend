@@ -1,6 +1,7 @@
 import os
 import re
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from flask import request, jsonify, current_app
 from flask_jwt_extended import create_access_token
@@ -151,6 +152,8 @@ def register():
         'avatar_path': new_user.avatar_path,
         'phone': new_user.phone,
         'status': new_user.status,
+        'created_at': new_user.created_at,
+        'updated_at': new_user.updated_at,
     }
 
     return jsonify({'message': '用户注册成功', 'user': user_data}), 201
@@ -195,7 +198,7 @@ def login():
             return jsonify({'message': '登录失败：密码错误', 'username_or_email': username_or_email}), 400
 
         # 更新用户的最后登录时间和状态
-        user.last_login = datetime.utcnow()
+        user.last_login = datetime.now(ZoneInfo("Asia/Shanghai"))
         user.status = 'active'
 
         # 提交更新到数据库
@@ -217,6 +220,8 @@ def login():
             'phone': user.phone,
             'last_login': user.last_login,
             'status': user.status,
+            'created_at': user.created_at,
+            'updated_at': user.updated_at,
         }
 
         return jsonify({'message': '登录成功', 'access_token': access_token, 'user': user_data}), 200

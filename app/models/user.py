@@ -1,4 +1,5 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from . import db
 
@@ -47,5 +48,6 @@ class User(db.Model):
     last_login = db.Column(db.DateTime)  # 最后登录时间
     status = db.Column(db.Enum('active', 'inactive', 'banned', name='user_status'), default='inactive',
                        nullable=False)  # 用户状态（在线、离线、封禁）
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # 用户创建时间
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # 最后更新时间
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 用户创建时间
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")),
+                           onupdate=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 最后更新时间
