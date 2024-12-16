@@ -41,18 +41,18 @@ def register():
 
     # 校验必填字段
     if not username or not email or not password:
-        current_app.logger.warning(f"用户名、邮箱或密码为空：{request.form}")
-        return jsonify({'message': '用户名、邮箱和密码是必填项'}), 400
+        current_app.logger.warning(f"注册失败：用户名、邮箱或密码为空：{request.form}")
+        return jsonify({'message': '注册失败：用户名、邮箱和密码是必填项'}), 400
 
     # 校验邮箱格式
     if not is_valid_email(email):
-        current_app.logger.warning(f'无效的邮箱格式：{email}')
-        return jsonify({'message': '无效的邮箱格式'}), 400
+        current_app.logger.warning(f'注册失败：无效的邮箱格式：{email}')
+        return jsonify({'message': '注册失败：无效的邮箱格式', 'email': email}), 400
 
     # 校验角色是否有效
     if role not in ['admin', 'developer', 'user']:
-        current_app.logger.warning(f'无效的角色：{role}')
-        return jsonify({'message': '无效的角色'}), 400
+        current_app.logger.warning(f'注册失败：无效的角色 {role}')
+        return jsonify({'message': '注册失败：无效的角色', 'role': role}), 400
 
     # 校验头像文件是否合规
     max_avatar_size = current_app.config['MAX_AVATAR_SIZE']
@@ -60,14 +60,15 @@ def register():
     if avatar_file:
         # 检查文件格式
         if not allowed_file(avatar_file.filename):
-            current_app.logger.warning(f"不支持的头像文件格式：{avatar_file.filename}")
-            return jsonify({'message': '头像文件格式不支持，仅支持 png, jpg, jpeg 格式'}), 400
+            current_app.logger.warning(f"注册失败：不支持的头像文件格式：{avatar_file.filename}")
+            return jsonify({'message': '注册失败：头像文件格式不支持，仅支持 png, jpg, jpeg 格式',
+                            'avatar_filename': avatar_file.filename}), 400
 
         # 检查文件大小
         avatar_size = len(avatar_file.read())
         if avatar_size > max_avatar_size:
-            current_app.logger.warning(f"头像文件太大：{avatar_size / (1024 * 1024)}MB")
-            return jsonify({'message': '头像文件太大，最大允许大小为 5MB'}), 400
+            current_app.logger.warning(f"注册失败：头像文件太大：{avatar_size / (1024 * 1024)}MB")
+            return jsonify({'message': '注册失败：头像文件太大，最大允许大小为 5MB', 'avatar_size': avatar_size}), 400
 
         # 重置文件读取指针
         avatar_file.seek(0)
@@ -76,16 +77,16 @@ def register():
 
     # 校验手机号格式
     if phone and not is_valid_phone(phone):
-        current_app.logger.warning(f'无效的手机号格式：{phone}')
-        return jsonify({'message': '无效的手机号格式'}), 400
+        current_app.logger.warning(f'注册失败：无效的手机号格式：{phone}')
+        return jsonify({'message': '注册失败：无效的手机号格式', 'phone': phone}), 400
 
     # 检查用户名和邮箱是否已经存在
     if User.query.filter_by(username=username).first():
-        current_app.logger.warning(f'用户名已存在：{username}')
-        return jsonify({'message': '用户名已存在'}), 400
+        current_app.logger.warning(f'注册失败：用户名 {username} 已存在')
+        return jsonify({'message': '注册失败：用户名已存在', 'username': username}), 400
     if User.query.filter_by(email=email).first():
-        current_app.logger.warning(f'邮箱已存在：{email}')
-        return jsonify({'message': '邮箱已存在'}), 400
+        current_app.logger.warning(f'注册失败：邮箱 {email} 已存在')
+        return jsonify({'message': '注册失败：邮箱已存在', 'email': email}), 400
 
     # 加密密码
     hashed_password = generate_password_hash(password)
@@ -95,7 +96,7 @@ def register():
     if avatar_file:
         # 获取配置的头像文件夹路径
         avatar_folder = current_app.config['AVATAR_FOLDER']
-        current_app.logger.info(f"头像文件夹路径：{avatar_folder}")
+        current_app.logger.info(f"头像文件夹绝对路径：{avatar_folder}")
 
         # 确保头像文件夹存在
         try:
@@ -134,9 +135,9 @@ def register():
         db.session.commit()
         current_app.logger.info(f"新用户注册成功：{username} ({email})")
     except Exception as e:
-        current_app.logger.error(f"保存用户数据失败：{str(e)}")
+        current_app.logger.error(f"保存新用户数据失败：{str(e)}")
         db.session.rollback()
-        return jsonify({'message': '服务器错误，无法保存用户数据'}), 500
+        return jsonify({'message': '服务器错误，无法保存新用户数据'}), 500
 
     user_data = {
         'id': new_user.user_id,
