@@ -123,9 +123,9 @@ def register():
         password=hashed_password,
         first_name=first_name,
         last_name=last_name,
-        phone=phone,
+        role=role,
         avatar_path=avatar_path,
-        role=role
+        phone=phone
     )
 
     # 添加到数据库
@@ -138,7 +138,18 @@ def register():
         db.session.rollback()
         return jsonify({'message': '服务器错误，无法保存用户数据'}), 500
 
-    return jsonify({'message': '用户注册成功'}), 201
+    user_data = {
+        'id': new_user.user_id,
+        'username': new_user.username,
+        'email': new_user.email,
+        'first_name': new_user.first_name,
+        'last_name': new_user.last_name,
+        'role': new_user.role,
+        'avatar_path': new_user.avatar_path,
+        'phone': new_user.phone
+    }
+
+    return jsonify({'message': '用户注册成功', 'user': user_data}), 201
 
 
 def allowed_file(filename):
