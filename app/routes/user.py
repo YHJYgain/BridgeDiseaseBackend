@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from flask import request, jsonify, current_app
+from flask import request, current_app, jsonify
 from flask_jwt_extended import create_access_token
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -254,7 +254,7 @@ def is_valid_email(email):
     return re.match(email_regex, email) is not None
 
 
-# 手机号的基本校验
+# 手机号校验
 def is_valid_phone(phone):
     """
     校验手机号格式是否有效。

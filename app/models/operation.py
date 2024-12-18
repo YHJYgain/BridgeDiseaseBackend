@@ -14,7 +14,7 @@ class Operation(db.Model):
         operation_id (int): 操作记录 ID，自动增长的主键。
         operation_type (str): 操作类型，使用枚举定义，如 'authenticate', 'create', 'read', 'update', 'delete' 等。
         description (str): 对操作的详细描述，帮助理解操作的背景和过程。
-        duration (float): 操作的持续时间，单位为秒（s）。
+        duration (float): 操作耗时，单位为秒（s）。
         failure_message (str): 当操作失败时，记录失败信息，帮助诊断问题。
         ip_address (str): 用户进行操作时的 IP 地址，记录操作来源的网络地址。
         device_info (str): 用户操作时的设备信息，通常为浏览器类型、操作系统等。
@@ -31,11 +31,11 @@ class Operation(db.Model):
     operation_type = db.Column(
         db.Enum('authenticate', 'create', 'read', 'update', 'delete', 'execute', 'manage', name='operation_types'),
         default='read', nullable=False)  # 操作类型（鉴权，创建，读取，更新，删除，执行任务，管理）
-    description = db.Column(db.Text)  # 操作描述
+    description = db.Column(db.Text, nullable=False)  # 操作描述
     duration = db.Column(db.Float)  # 操作耗时（s）
     failure_message = db.Column(db.Text)  # 失败信息
-    ip_address = db.Column(db.String(45))  # IP 地址
-    device_info = db.Column(db.String(255))  # 设备信息
+    ip_address = db.Column(db.String(45), nullable=False)  # IP 地址
+    device_info = db.Column(db.String(255), nullable=False)  # 设备信息
     status = db.Column(db.Enum('success', 'failure', name='operation_status'), default='success',
                        nullable=False)  # 操作状态（成功，失败）
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 操作时间
