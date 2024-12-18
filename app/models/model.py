@@ -44,7 +44,7 @@ class Model(db.Model):
     model_name = db.Column(db.String(255), unique=True, nullable=False)  # 模型名称
     model_path = db.Column(db.String(255), unique=True, nullable=False)  # 存储路径
     augmentation = db.Column(db.String(255))  # 数据增强方式
-    disease_category = db.Column(db.String(100))  # 病害类别
+    disease_category = db.Column(db.String(100), nullable=False)  # 病害类别
     layers = db.Column(db.Integer)  # 层数
     parameters = db.Column(db.Integer)  # 参数量
     GFLOPs = db.Column(db.Float)  # 计算量

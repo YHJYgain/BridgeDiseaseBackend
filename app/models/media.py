@@ -34,7 +34,7 @@ class Media(db.Model):
     file_path = db.Column(db.String(255), nullable=False)  # 文件路径
     description = db.Column(db.Text)  # 影像描述
     file_size = db.Column(db.Integer)  # 文件大小（字节）
-    file_type = db.Column(db.String(50))  # 文件类型（图片或视频）
+    file_type = db.Column(db.String(50), nullable=False)  # 文件类型（图片或视频）
     resolution_width = db.Column(db.Integer)  # 分辨率宽度
     resolution_height = db.Column(db.Integer)  # 分辨率高度
     upload_time = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 上传时间
