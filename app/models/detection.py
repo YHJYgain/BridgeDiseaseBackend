@@ -2,6 +2,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from . import db
+from ..constants import DiseaseGrade, TaskStatus
 
 
 class Detection(db.Model):
@@ -53,12 +54,10 @@ class Detection(db.Model):
     texture_roughness = db.Column(db.Float)  # 纹理粗糙度
     crack_width = db.Column(db.Float)  # 裂缝宽度（适用裂缝等）
     avg_hue = db.Column(db.Float)  # 平均色调（适用锈蚀等）
-    disease_grade = db.Column(db.Enum('mild', 'moderate', 'severe', 'critical'), default='mild',
-                              nullable=False)  # 病害评估等级（轻度，中度，重度，严重）
+    disease_grade = db.Column(db.Enum(DiseaseGrade), default=DiseaseGrade.MILD, nullable=False)  # 病害评估等级
     disease_description = db.Column(db.Text)  # 病害评估描述
     detection_time = db.Column(db.DateTime)  # 检测时间
-    status = db.Column(db.Enum('pending', 'in_progress', 'completed', 'failed', name='task_status'),
-                       default='pending', nullable=False)  # 任务状态（待处理，检测中，已完成，检测失败）
+    status = db.Column(db.Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False)  # 任务状态
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 创建时间
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")),
                            onupdate=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 最后更新时间

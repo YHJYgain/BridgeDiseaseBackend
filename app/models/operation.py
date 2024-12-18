@@ -2,6 +2,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from . import db
+from ..constants import OperationType, OperationStatus
 
 
 class Operation(db.Model):
@@ -28,16 +29,13 @@ class Operation(db.Model):
     __tablename__ = 'operation'
 
     operation_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 操作记录 ID
-    operation_type = db.Column(
-        db.Enum('authenticate', 'create', 'read', 'update', 'delete', 'execute', 'manage', name='operation_types'),
-        default='read', nullable=False)  # 操作类型（鉴权，创建，读取，更新，删除，执行任务，管理）
+    operation_type = db.Column(db.Enum(OperationType), default=OperationType.READ, nullable=False)  # 操作类型
     description = db.Column(db.Text, nullable=False)  # 操作描述
     duration = db.Column(db.Float)  # 操作耗时（s）
     failure_message = db.Column(db.Text)  # 失败信息
     ip_address = db.Column(db.String(45), nullable=False)  # IP 地址
     device_info = db.Column(db.String(255), nullable=False)  # 设备信息
-    status = db.Column(db.Enum('success', 'failure', name='operation_status'), default='success',
-                       nullable=False)  # 操作状态（成功，失败）
+    status = db.Column(db.Enum(OperationStatus), default=OperationStatus.SUCCESS, nullable=False)  # 操作状态
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 操作时间
     owner_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)  # 所属用户 ID（外键）
 
