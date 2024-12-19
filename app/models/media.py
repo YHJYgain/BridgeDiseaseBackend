@@ -42,3 +42,32 @@ class Media(db.Model):
 
     # 设置与 User 表的关系：一份影像文件只属于一个用户
     owner = db.relationship('User', backref=db.backref('medias', lazy=True))
+
+    def __repr__(self):
+        return (f"Media(media_id={self.media_id}, "
+                f"file_name={self.file_name}, "
+                f"file_path={self.file_path}, "
+                f"description={self.description}, "
+                f"file_size={self.file_size}, "
+                f"file_type={self.file_type}, "
+                f"resolution_width={self.resolution_width}, "
+                f"resolution_height={self.resolution_height}, "
+                f"upload_time={self.upload_time}, "
+                f"owner_id={self.owner_id})")
+
+    def to_dict(self):
+        """
+        将 Media 实例转化为字典。
+        """
+        return {
+            'media_id': self.media_id,
+            'file_name': self.file_name,
+            'file_path': self.file_path,
+            'description': self.description,
+            'file_size': self.file_size,
+            'file_type': self.file_type,
+            'resolution_width': self.resolution_width,
+            'resolution_height': self.resolution_height,
+            'upload_time': self.upload_time,
+            'owner_id': self.owner_id
+        }

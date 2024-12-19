@@ -37,7 +37,36 @@ class Operation(db.Model):
     device_info = db.Column(db.String(255), nullable=False)  # 设备信息
     status = db.Column(db.Enum(OperationStatus), default=OperationStatus.SUCCESS, nullable=False)  # 操作状态
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 操作时间
-    owner_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)  # 所属用户 ID（外键）
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.user_id'))  # 所属用户 ID（外键）
 
     # 设置与 User 的关系：一个操作记录只属于一个用户
     owner = db.relationship('User', backref=db.backref('operations', lazy=True))
+
+    def __repr__(self):
+        return (f"Operation(operation_id: {self.operation_id}, "
+                f"operation_type: {self.operation_type.name}, "
+                f"description: {self.description}, "
+                f"duration: {self.duration}, "
+                f"failure_message: {self.failure_message}, "
+                f"ip_address: {self.ip_address}, "
+                f"device_info: {self.device_info}, "
+                f"status: {self.status.name}, "
+                f"created_at: {self.created_at}, "
+                f"owner_id: {self.owner_id})")
+
+    def to_dict(self):
+        """
+        将 Operation 实例转化为字典。
+        """
+        return {
+            'operation_id': self.operation_id,
+            'operation_type': self.operation_type.name,
+            'description': self.description,
+            'duration': self.duration,
+            'failure_message': self.failure_message,
+            'ip_address': self.ip_address,
+            'device_info': self.device_info,
+            'status': self.status.name,
+            'created_at': self.created_at,
+            'owner_id': self.owner_id
+        }

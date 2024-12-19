@@ -65,3 +65,54 @@ class Model(db.Model):
 
     # 设置与 User 表的关系：一个模型只属于一个用户
     owner = db.relationship('User', backref=db.backref('models', lazy=True))
+
+    def __repr__(self):
+        return (f"Model(model_id={self.model_id}, "
+                f"model_name={self.model_name}, "
+                f"model_path={self.model_path}, "
+                f"augmentation={self.augmentation}, "
+                f"disease_category={self.disease_category}, "
+                f"layers={self.layers}, "
+                f"parameters={self.parameters}, "
+                f"GFLOPs={self.GFLOPs}, "
+                f"box_p={self.box_p}, "
+                f"box_r={self.box_r}, "
+                f"box_mAP50={self.box_mAP50}, "
+                f"box_mAP50_95={self.box_mAP50_95}, "
+                f"mask_p={self.mask_p}, "
+                f"mask_r={self.mask_r}, "
+                f"mask_mAP50={self.mask_mAP50}, "
+                f"mask_mAP50_95={self.mask_mAP50_95}, "
+                f"fitness_score={self.fitness_score}, "
+                f"f1_score={self.f1_score}, "
+                f"created_at={self.created_at}, "
+                f"updated_at={self.updated_at}, "
+                f"owner_id={self.owner_id})")
+
+    def to_dict(self):
+        """
+        将 Model 实例转化为字典。
+        """
+        return {
+            'model_id': self.model_id,
+            'model_name': self.model_name,
+            'model_path': self.model_path,
+            'augmentation': self.augmentation,
+            'disease_category': self.disease_category,
+            'layers': self.layers,
+            'parameters': self.parameters,
+            'GFLOPs': self.GFLOPs,
+            'box_p': self.box_p,
+            'box_r': self.box_r,
+            'box_mAP50': self.box_mAP50,
+            'box_mAP50_95': self.box_mAP50_95,
+            'mask_p': self.mask_p,
+            'mask_r': self.mask_r,
+            'mask_mAP50': self.mask_mAP50,
+            'mask_mAP50_95': self.mask_mAP50_95,
+            'fitness_score': self.fitness_score,
+            'f1_score': self.f1_score,
+            'created_at': self.created_at,
+            'updated_at': self.updated_at,
+            'owner_id': self.owner_id
+        }

@@ -71,3 +71,50 @@ class Detection(db.Model):
     model = db.relationship('Model', backref=db.backref('detections', lazy=True))
     # 设置与 Media 表的关系：一次检测分割只能使用一份影像文件
     media = db.relationship('Media', backref=db.backref('detections', lazy=True))
+
+    def __repr__(self):
+        return (f"Detection(detection_id={self.detection_id}, "
+                f"result_image_path={self.result_image_path}, "
+                f"cropped_image_path={self.cropped_image_path}, "
+                f"disease_count={self.disease_count}, "
+                f"disease_perimeter={self.disease_perimeter}, "
+                f"disease_area={self.disease_area}, "
+                f"shape_complexity={self.shape_complexity}, "
+                f"texture_roughness={self.texture_roughness}, "
+                f"crack_width={self.crack_width}, "
+                f"avg_hue={self.avg_hue}, "
+                f"disease_grade={self.disease_grade.name}, "
+                f"disease_description={self.disease_description}, "
+                f"detection_time={self.detection_time}, "
+                f"status={self.status.name}, "
+                f"created_at={self.created_at}, "
+                f"updated_at={self.updated_at}, "
+                f"owner_id={self.owner_id}, "
+                f"model_id={self.model_id}, "
+                f"media_id={self.media_id})")
+
+    def to_dict(self):
+        """
+        将 Detection 实例转化为字典。
+        """
+        return {
+            'detection_id': self.detection_id,
+            'result_image_path': self.result_image_path,
+            'cropped_image_path': self.cropped_image_path,
+            'disease_count': self.disease_count,
+            'disease_perimeter': self.disease_perimeter,
+            'disease_area': self.disease_area,
+            'shape_complexity': self.shape_complexity,
+            'texture_roughness': self.texture_roughness,
+            'crack_width': self.crack_width,
+            'avg_hue': self.avg_hue,
+            'disease_grade': self.disease_grade.name,
+            'disease_description': self.disease_description,
+            'detection_time': self.detection_time,
+            'status': self.status.name,
+            'created_at': self.created_at,
+            'updated_at': self.updated_at,
+            'owner_id': self.owner_id,
+            'model_id': self.model_id,
+            'media_id': self.media_id
+        }

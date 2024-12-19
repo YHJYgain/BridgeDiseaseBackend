@@ -50,3 +50,37 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 用户创建时间
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")),
                            onupdate=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 最后更新时间
+
+    def __repr__(self):
+        return (f"User(user_id={self.user_id}, "
+                f"username='{self.username}', "
+                f"email='{self.email}', "
+                f"password='{self.password}', "
+                f"first_name='{self.first_name}', "
+                f"last_name='{self.last_name}', "
+                f"role='{self.role.name}', "
+                f"avatar_path='{self.avatar_path}', "
+                f"phone='{self.phone}', "
+                f"last_login={self.last_login}, "
+                f"status='{self.status.name}', "
+                f"created_at={self.created_at}, "
+                f"updated_at={self.updated_at})")
+
+    def to_dict(self):
+        """
+        将 User 实例转化为字典。
+        """
+        return {
+            'user_id': self.user_id,
+            'username': self.username,
+            'email': self.email,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'role': self.role.name,
+            'avatar_path': self.avatar_path,
+            'phone': self.phone,
+            'last_login': self.last_login,
+            'status': self.status.name,
+            'created_at': self.created_at,
+            'updated_at': self.updated_at
+        }
