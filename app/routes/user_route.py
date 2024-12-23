@@ -12,7 +12,6 @@ from ..constants import OperationType, UserRole
 from ..models.operation import Operation
 from ..models.user import User
 from ..utils import *
-from ..utils.operation_util import *
 
 
 @user_routes.route('/register', methods=['POST'])
