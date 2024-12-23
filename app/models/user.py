@@ -55,7 +55,6 @@ class User(db.Model):
         return (f"User(user_id={self.user_id}, "
                 f"username='{self.username}', "
                 f"email='{self.email}', "
-                f"password='{self.password}', "
                 f"first_name='{self.first_name}', "
                 f"last_name='{self.last_name}', "
                 f"role='{self.role.name}', "
