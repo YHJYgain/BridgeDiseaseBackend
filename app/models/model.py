@@ -1,7 +1,7 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from . import db
+from app.models import db
 
 
 class Model(db.Model):

@@ -1,8 +1,8 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from . import db
-from ..constants import UserRole, UserStatus
+from app.constants import UserRole, UserStatus
+from app.models import db
 
 
 class User(db.Model):

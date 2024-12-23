@@ -7,11 +7,10 @@ from flask_jwt_extended import create_access_token
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-from . import user_routes
-from ..constants import OperationType, UserRole
-from ..models.operation import Operation
-from ..models.user import User
-from ..utils import *
+from app.constants import OperationType, UserRole
+from app.models import Operation, User
+from app.routes import user_routes
+from app.utils import *
 
 
 @user_routes.route('/register', methods=['POST'])
@@ -46,12 +45,14 @@ def register():
     ]
     for condition, message in validation_checks:
         if condition:
-            return handle_operation_failure(new_operation, start_time, message)
+            new_operation = handle_operation_failure(new_operation, start_time, message)
+            return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 检查用户名和邮箱是否已经存在
     if User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first():
         failure_message = f"【注册失败】用户名 {username} 或邮箱 {email} 已注册"
-        return handle_operation_failure(new_operation, start_time, failure_message)
+        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
+        return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 加密密码
     hashed_password = generate_password_hash(password)
@@ -99,7 +100,8 @@ def login():
     # 校验必填字段
     if not username_or_email or not password:
         failure_message = "【登录失败】用户名或邮箱和密码是必填项"
-        return handle_operation_failure(new_operation, start_time, failure_message)
+        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
+        return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 根据用户名或邮箱查找用户
     user = User.query.filter((User.username == username_or_email) | (User.email == username_or_email)).first()
@@ -107,12 +109,14 @@ def login():
     # 检查用户是否存在
     if not user:
         failure_message = f"【登录失败】用户名或邮箱 {username_or_email} 不存在"
-        return handle_operation_failure(new_operation, start_time, failure_message)
+        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
+        return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 验证密码
     if not check_password_hash(user.password, password):
         failure_message = f"【登录失败】用户名或邮箱 {username_or_email} 密码错误"
-        return handle_operation_failure(new_operation, start_time, failure_message, user.user_id)
+        new_operation = handle_operation_failure(new_operation, start_time, failure_message, user.user_id)
+        return jsonify({'operation': new_operation.to_dict(), 'user': user.to_dict()}), 400
 
     # 更新用户的最后登录时间和状态
     user.last_login = datetime.now(ZoneInfo("Asia/Shanghai"))

@@ -1,3 +1,5 @@
+import os
+from datetime import datetime
 from logging.config import dictConfig
 
 from flask import Flask
@@ -6,17 +8,7 @@ from flask_jwt_extended import JWTManager
 from .config import Config
 from .errors import *
 from .models import init_db
-from .models.detection import Detection
-from .models.media import Media
-from .models.model import Model
-from .models.operation import Operation
-from .models.user import User
 from .routes import register_routes
-from .routes.detection_route import *
-from .routes.media_route import *
-from .routes.model_route import *
-from .routes.operation_route import *
-from .routes.user_route import *
 
 
 def create_app():
@@ -44,7 +36,7 @@ def create_app():
     # 注册蓝图
     register_routes(app)
 
-    # 注册错误处理器
+    # 注册全局错误处理器
     register_error_handlers(app)
 
     return app

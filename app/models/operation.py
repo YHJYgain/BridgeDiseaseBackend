@@ -1,8 +1,8 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from . import db
-from ..constants import OperationType, OperationStatus
+from app.constants import OperationType, OperationStatus
+from app.models import db
 
 
 class Operation(db.Model):

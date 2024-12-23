@@ -17,3 +17,10 @@ def init_db(app):
         db.create_all()  # 创建数据库表
 
     app.logger.info('初始化数据库。')
+
+
+from .user import *
+from .model import *
+from .media import *
+from .detection import *
+from .operation import *

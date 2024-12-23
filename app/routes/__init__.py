@@ -25,3 +25,10 @@ def register_routes(app):
     app.register_blueprint(media_routes)
     app.register_blueprint(detection_routes)
     app.register_blueprint(operation_routes)
+
+
+from .user_route import *
+from .model_route import *
+from .media_route import *
+from .detection_route import *
+from .operation_route import *

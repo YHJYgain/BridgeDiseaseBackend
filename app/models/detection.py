@@ -1,8 +1,8 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from . import db
-from ..constants import DiseaseGrade, TaskStatus
+from app.constants import DiseaseGrade, TaskStatus
+from app.models import db
 
 
 class Detection(db.Model):
