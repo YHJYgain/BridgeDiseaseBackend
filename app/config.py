@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 
 class Config:
@@ -9,3 +10,5 @@ class Config:
     AVATAR_FOLDER = os.path.join(os.getcwd(), 'app', 'static', 'avatars')  # 头像存储的文件夹路径
     MAX_AVATAR_SIZE = 5 * 1024 * 1024  # 最大头像文件大小：5MB
     JWT_SECRET_KEY = 'WZY'  # 为 JWT 设置一个密钥
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)  # access token 过期时间
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)  # refresh token 过期时间

@@ -3,11 +3,11 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from flask import request, jsonify
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, create_refresh_token
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-from app.constants import OperationType, UserRole
+from app.constants import OperationType, UserRole, UserStatus
 from app.models import Operation, User
 from app.routes import user_routes
 from app.utils import *
@@ -120,17 +120,78 @@ def login():
 
     # 更新用户的最后登录时间和状态
     user.last_login = datetime.now(ZoneInfo("Asia/Shanghai"))
-    user.status = 'active'
+    user.status = UserStatus.ACTIVE
     db.session.commit()
 
-    # 创建 JWT 令牌
+    # 根据 user_id 创建 JWT 令牌
     access_token = create_access_token(identity=user.user_id)
+    refresh_token = create_refresh_token(identity=user.user_id)
 
     # 提交操作记录
     new_operation = handle_operation_success(new_operation, start_time, user.user_id)
 
-    current_app.logger.info(f"【登录成功】user: {user}, JWT 令牌：{access_token}")
-    return jsonify({'operation': new_operation.to_dict(), 'user': user.to_dict()}), 200
+    current_app.logger.info(f"【登录成功】user: {user}, access_token：{access_token}, refresh_token: {refresh_token}")
+    return jsonify({'operation': new_operation.to_dict(), 'user': user.to_dict(), 'access_token': access_token,
+                    'refresh_token': refresh_token}), 200
+
+
+@user_routes.route('/logout', methods=['POST'])
+@jwt_required()
+def logout():
+    start_time = time.time()  # 记录操作开始时间
+
+    # 创建一个新的操作记录
+    new_operation = Operation(
+        operation_type=OperationType.AUTHENTICATE,
+        description="用户登出",
+        ip_address=request.remote_addr,
+        device_info=request.user_agent.string,
+    )
+
+    # 获取当前用户的身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+    if not current_user:
+        failure_message = f"【登出失败】用户 ID: {current_user_id} 不存在"
+        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
+        return jsonify({'operation': new_operation.to_dict()}), 400
+
+    # 更新用户的最后登录时间和状态
+    current_user.last_logout = datetime.now(ZoneInfo("Asia/Shanghai"))
+    current_user.status = UserStatus.INACTIVE
+    db.session.commit()
+
+    # 提交操作记录
+    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
+
+    current_app.logger.info(f"【登出成功】user: {current_user}")
+    return jsonify({'operation': new_operation.to_dict(), 'user': current_user.to_dict()}), 200
+
+
+@user_routes.route('/refresh', methods=['POST'])
+@jwt_required(refresh=True)
+def refresh():
+    start_time = time.time()  # 记录操作开始时间
+
+    # 创建一个新的操作记录
+    new_operation = Operation(
+        operation_type=OperationType.AUTHENTICATE,
+        description="刷新用户 token",
+        ip_address=request.remote_addr,
+        device_info=request.user_agent.string,
+    )
+
+    # 获取当前用户的身份（使用 refresh token）
+    current_user_id = get_jwt_identity()
+
+    # 生成新的 access token
+    access_token = create_access_token(identity=current_user_id)
+
+    # 提交操作记录
+    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
+
+    current_app.logger.info(f"【刷新 token 成功】user: {current_user_id}, access_token：{access_token}")
+    return jsonify({'operation': new_operation.to_dict(), 'access_token': access_token}), 200
 
 
 def handle_avatar_upload(avatar_file):
