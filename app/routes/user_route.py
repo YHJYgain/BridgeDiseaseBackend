@@ -190,8 +190,36 @@ def refresh():
     # 提交操作记录
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【刷新 token 成功】user: {current_user_id}, access_token：{access_token}")
+    current_app.logger.info(f"【刷新 token 成功】user_id: {current_user_id}, access_token：{access_token}")
     return jsonify({'operation': new_operation.to_dict(), 'access_token': access_token}), 200
+
+
+@user_routes.route('/profile', methods=['GET'])
+@jwt_required()
+def profile():
+    start_time = time.time()  # 记录操作开始时间
+
+    # 创建一个新的操作记录
+    new_operation = Operation(
+        operation_type=OperationType.READ,
+        description="获取用户资料",
+        ip_address=request.remote_addr,
+        device_info=request.user_agent.string,
+    )
+
+    # 获取当前用户的身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+    if not current_user:
+        failure_message = f"【获取用户资料失败】用户 ID: {current_user_id} 不存在"
+        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
+        return jsonify({'operation': new_operation.to_dict()}), 400
+
+    # 提交操作记录
+    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
+
+    current_app.logger.info(f"【获取用户资料成功】user: {current_user}")
+    return jsonify({'operation': new_operation.to_dict(), 'user': current_user.to_dict()}), 200
 
 
 def handle_avatar_upload(avatar_file):
