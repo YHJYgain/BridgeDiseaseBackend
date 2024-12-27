@@ -6,10 +6,10 @@ from app.models import db
 
 class Media(db.Model):
     """
-    影像模型类，表示数据库中的 'media' 表。
+    媒体模型类，表示数据库中的 'media' 表。
 
     该类存储与用户相关联的媒体文件的基本信息，如文件名、路径、文件类型、分辨率等。
-    影像文件可以是图片或视频，并关联到检测任务记录。每个文件只能属于一个用户，且可进行状态管理。
+    媒体文件可以是图片或视频，并关联到检测任务记录。每个文件只能属于一个用户，且可进行状态管理。
 
     Attributes:
         media_id (int): 媒体文件的唯一标识符（主键）。
@@ -29,10 +29,10 @@ class Media(db.Model):
     """
     __tablename__ = 'media'
 
-    media_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 媒体记录 ID
+    media_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 媒体 ID
     file_name = db.Column(db.String(255), nullable=False)  # 文件名
     file_path = db.Column(db.String(255), nullable=False)  # 文件路径
-    description = db.Column(db.Text)  # 影像描述
+    description = db.Column(db.Text)  # 媒体描述
     file_size = db.Column(db.Integer)  # 文件大小（字节）
     file_type = db.Column(db.String(50), nullable=False)  # 文件类型（图片或视频）
     resolution_width = db.Column(db.Integer)  # 分辨率宽度
@@ -40,7 +40,7 @@ class Media(db.Model):
     upload_time = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 上传时间
     owner_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)  # 所属用户 ID（外键）
 
-    # 设置与 User 表的关系：一份影像文件只属于一个用户
+    # 设置与 User 表的关系：一份媒体文件只属于一个用户
     owner = db.relationship('User', backref=db.backref('medias', lazy=True))
 
     def __repr__(self):

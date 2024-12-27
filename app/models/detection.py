@@ -33,12 +33,12 @@ class Detection(db.Model):
         updated_at (datetime): 记录最后更新时间，自动更新。
         owner_id (int): 执行该检测任务的用户 ID（外键）。
         model_id (int): 使用的模型 ID（外键）。
-        media_id (int): 使用的影像文件 ID（外键）。
+        media_id (int): 使用的媒体文件 ID（外键）。
 
     Relationships:
         owner (User): 每条检测记录关联一个用户，表示该任务由哪个用户执行。
         model (Model): 每条记录关联一个模型，表示该任务使用的模型。
-        media (Media): 每条记录关联一个影像文件，表示该任务使用的影像。
+        media (Media): 每条记录关联一个媒体文件，表示该任务使用的媒体文件。
     """
     __tablename__ = 'detection'
 
@@ -63,13 +63,13 @@ class Detection(db.Model):
                            onupdate=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 最后更新时间
     owner_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)  # 所属用户 ID（外键）
     model_id = db.Column(db.Integer, db.ForeignKey('model.model_id'), nullable=False)  # 使用模型 ID（外键）
-    media_id = db.Column(db.Integer, db.ForeignKey('media.media_id'), nullable=False)  # 使用影像 ID（外键）
+    media_id = db.Column(db.Integer, db.ForeignKey('media.media_id'), nullable=False)  # 使用媒体 ID（外键）
 
     # 设置与 User 表的关系：一次检测分割只属于一个用户
     owner = db.relationship('User', backref=db.backref('detections', lazy=True))
     # 设置与 Model 表的关系：一次检测分割只使用一个模型
     model = db.relationship('Model', backref=db.backref('detections', lazy=True))
-    # 设置与 Media 表的关系：一次检测分割只能使用一份影像文件
+    # 设置与 Media 表的关系：一次检测分割只能使用一份媒体文件
     media = db.relationship('Media', backref=db.backref('detections', lazy=True))
 
     def __repr__(self):
