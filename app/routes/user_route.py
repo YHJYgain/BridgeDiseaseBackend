@@ -222,6 +222,71 @@ def profile():
     return jsonify({'operation': new_operation.to_dict(), 'user': current_user.to_dict()}), 200
 
 
+@user_routes.route('/update_profile', methods=['PUT'])
+@jwt_required()
+def update_profile():
+    start_time = time.time()  # 记录操作开始时间
+
+    # 创建一个新的操作记录
+    new_operation = Operation(
+        operation_type=OperationType.UPDATE,
+        description="更新用户资料",
+        ip_address=request.remote_addr,
+        device_info=request.user_agent.string,
+    )
+
+    # 获取当前用户的身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+    if not current_user:
+        failure_message = f"【更新用户资料失败】用户 ID: {current_user_id} 不存在"
+        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
+        return jsonify({'operation': new_operation.to_dict()}), 400
+
+    # 获取请求中的更新数据
+    username = request.form.get('username', current_user.username)
+    email = request.form.get('email', current_user.email)
+    first_name = request.form.get('first_name', current_user.first_name)
+    last_name = request.form.get('last_name', current_user.last_name)
+    avatar_file = request.files.get('avatar_file')
+    phone = request.form.get('phone', current_user.phone)
+
+    # 校验必填字段和其他常见验证
+    validation_checks = [
+        (not is_valid_email(email), f"【更新用户资料失败】无效的邮箱格式：{email}"),
+        (avatar_file and not is_valid_avatar_file(avatar_file), "【更新用户资料失败】头像文件类型或大小不合规"),
+        (phone and not is_valid_phone(phone), f"【更新用户资料失败】无效的手机号格式：{phone}")
+    ]
+    for condition, message in validation_checks:
+        if condition:
+            new_operation = handle_operation_failure(new_operation, start_time, message)
+            return jsonify({'operation': new_operation.to_dict()}), 400
+
+    # 检查用户名和邮箱是否已经存在
+    if User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first():
+        failure_message = f"【更新用户资料失败】用户名 {username} 或邮箱 {email} 已存在"
+        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
+        return jsonify({'operation': new_operation.to_dict()}), 400
+
+    # 头像存储处理
+    avatar_path = handle_avatar_upload(avatar_file)
+
+    # 更新用户信息
+    current_user.username = username
+    current_user.email = email
+    current_user.first_name = first_name
+    current_user.last_name = last_name
+    current_user.avatar_path = avatar_path
+    current_user.phone = phone
+    db.session.commit()
+
+    # 提交操作记录
+    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
+
+    current_app.logger.info(f"【更新用户资料成功】user: {current_user}")
+    return jsonify({'operation': new_operation.to_dict(), 'user': current_user.to_dict()}), 200
+
+
 def handle_avatar_upload(avatar_file):
     if not avatar_file:
         current_app.logger.warning("头像文件为空")
