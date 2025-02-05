@@ -251,7 +251,7 @@ def update_profile():
     for condition, message in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message)
-            return jsonify({'operation': new_operation.to_dict()}), 400
+            return jsonify({'operation': new_operation.to_dict(), 'user': current_user.to_dict()}), 400
 
     # 头像存储处理
     avatar_path = handle_avatar_upload(avatar_file)
@@ -270,6 +270,53 @@ def update_profile():
 
     current_app.logger.info(f"【更新用户资料成功】user: {current_user}")
     return jsonify({'operation': new_operation.to_dict(), 'user': current_user.to_dict()}), 200
+
+
+@user_routes.route('/change_password', methods=['PUT'])
+@jwt_required()
+def change_password():
+    start_time = time.time()  # 记录操作开始时间
+
+    # 获取请求中的当前密码和新密码
+    current_password = request.form.get('current_password')
+    new_password = request.form.get('new_password')
+
+    # 创建一个新的操作记录
+    new_operation = Operation(
+        operation_type=OperationType.UPDATE,
+        description="修改密码",
+        ip_address=request.remote_addr,
+        device_info=request.user_agent.string,
+    )
+
+    # 获取当前用户的身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+    if not current_user:
+        failure_message = f"【修改密码失败】用户 ID: {current_user_id} 不存在"
+        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
+        return jsonify({'operation': new_operation.to_dict()}), 400
+
+    # 校验字段
+    validation_checks = [
+        (not current_password or not new_password, "【修改密码失败】当前密码或新密码为空"),
+        (not check_password_hash(current_user.password, current_password), "【修改密码失败】当前密码错误")
+    ]
+    for condition, message in validation_checks:
+        if condition:
+            new_operation = handle_operation_failure(new_operation, start_time, message)
+            return jsonify({'operation': new_operation.to_dict(), 'user': current_user.to_dict()}), 400
+
+    # 更新密码
+    current_user.password = generate_password_hash(new_password)
+    db.session.commit()
+
+    # 提交操作记录
+    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
+
+    current_app.logger.info(f"【修改密码成功】user: {current_user}")
+    return jsonify(
+        {'operation': new_operation.to_dict(), 'user': current_user.to_dict(), "old_password": current_password}), 200
 
 
 def handle_avatar_upload(avatar_file):
