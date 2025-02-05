@@ -35,24 +35,20 @@ def register():
         device_info=request.user_agent.string,
     )
 
-    # 校验必填字段和其他常见验证
+    # 校验字段
     validation_checks = [
         (not username or not email or not password, "【注册失败】用户名、邮箱或密码为空"),
         (not is_valid_email(email), f"【注册失败】无效的邮箱格式：{email}"),
         (role not in UserRole.list(), f"【注册失败】无效的角色：{role}，只限 'admin', 'developer', 'user'"),
         (avatar_file and not is_valid_avatar_file(avatar_file), "【注册失败】头像文件类型或大小不合规"),
-        (phone and not is_valid_phone(phone), f"【注册失败】无效的手机号格式：{phone}")
+        (phone and not is_valid_phone(phone), f"【注册失败】无效的手机号格式：{phone}"),
+        (User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first(),
+         f"【注册失败】用户名 {username} 或邮箱 {email} 已注册")
     ]
     for condition, message in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message)
             return jsonify({'operation': new_operation.to_dict()}), 400
-
-    # 检查用户名和邮箱是否已经存在
-    if User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first():
-        failure_message = f"【注册失败】用户名 {username} 或邮箱 {email} 已注册"
-        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
-        return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 加密密码
     hashed_password = generate_password_hash(password)
@@ -97,26 +93,19 @@ def login():
         device_info=request.user_agent.string,
     )
 
-    # 校验必填字段
-    if not username_or_email or not password:
-        failure_message = "【登录失败】用户名或邮箱和密码是必填项"
-        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
-        return jsonify({'operation': new_operation.to_dict()}), 400
-
     # 根据用户名或邮箱查找用户
     user = User.query.filter((User.username == username_or_email) | (User.email == username_or_email)).first()
 
-    # 检查用户是否存在
-    if not user:
-        failure_message = f"【登录失败】用户名或邮箱 {username_or_email} 不存在"
-        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
-        return jsonify({'operation': new_operation.to_dict()}), 400
-
-    # 验证密码
-    if not check_password_hash(user.password, password):
-        failure_message = f"【登录失败】用户名或邮箱 {username_or_email} 密码错误"
-        new_operation = handle_operation_failure(new_operation, start_time, failure_message, user.user_id)
-        return jsonify({'operation': new_operation.to_dict(), 'user': user.to_dict()}), 400
+    # 校验字段
+    validation_checks = [
+        (not username_or_email or not password, "【登录失败】用户名或邮箱和密码是必填项"),
+        (not user, f"【登录失败】用户名或邮箱 {username_or_email} 不存在"),
+        (not check_password_hash(user.password, password), f"【登录失败】用户名或邮箱 {username_or_email} 密码错误")
+    ]
+    for condition, message in validation_checks:
+        if condition:
+            new_operation = handle_operation_failure(new_operation, start_time, message)
+            return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 更新用户的最后登录时间和状态
     user.last_login = datetime.now(ZoneInfo("Asia/Shanghai"))
@@ -255,18 +244,14 @@ def update_profile():
     validation_checks = [
         (not is_valid_email(email), f"【更新用户资料失败】无效的邮箱格式：{email}"),
         (avatar_file and not is_valid_avatar_file(avatar_file), "【更新用户资料失败】头像文件类型或大小不合规"),
-        (phone and not is_valid_phone(phone), f"【更新用户资料失败】无效的手机号格式：{phone}")
+        (phone and not is_valid_phone(phone), f"【更新用户资料失败】无效的手机号格式：{phone}"),
+        (User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first(),
+         f"【更新用户资料失败】用户名 {username} 或邮箱 {email} 已存在")
     ]
     for condition, message in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message)
             return jsonify({'operation': new_operation.to_dict()}), 400
-
-    # 检查用户名和邮箱是否已经存在
-    if User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first():
-        failure_message = f"【更新用户资料失败】用户名 {username} 或邮箱 {email} 已存在"
-        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
-        return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 头像存储处理
     avatar_path = handle_avatar_upload(avatar_file)
