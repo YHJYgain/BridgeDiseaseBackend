@@ -1,16 +1,16 @@
-import os
+import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from flask import request, jsonify
+from flask import request, jsonify, current_app
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, create_refresh_token
 from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
 
 from app.constants import OperationType, UserRole, UserStatus
-from app.models import Operation, User
+from app.models import Operation, User, db
 from app.routes import user_routes
-from app.utils import *
+from app.utils import is_valid_email, is_valid_avatar_file, is_valid_phone, handle_operation_failure, \
+    handle_avatar_upload, handle_operation_success
 
 
 @user_routes.route('/register', methods=['POST'])
@@ -317,22 +317,3 @@ def change_password():
     current_app.logger.info(f"【修改密码成功】user: {current_user}")
     return jsonify(
         {'operation': new_operation.to_dict(), 'user': current_user.to_dict(), "old_password": current_password}), 200
-
-
-def handle_avatar_upload(avatar_file):
-    if not avatar_file:
-        current_app.logger.warning("头像文件为空")
-        return None
-
-    avatar_folder = current_app.config['AVATAR_FOLDER']
-
-    # 确保头像文件夹存在
-    os.makedirs(avatar_folder, exist_ok=True)
-
-    # 保存头像文件
-    avatar_filename = secure_filename(avatar_file.filename)  # 获取安全的文件名
-    avatar_path = os.path.join('static', 'avatars', avatar_filename)  # 存储相对路径
-    avatar_file.save(os.path.join(avatar_folder, avatar_filename))  # 存储在 app/static/avatars 文件夹
-
-    current_app.logger.info(f"头像文件已保存：{avatar_path}")
-    return avatar_path
