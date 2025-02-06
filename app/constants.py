@@ -18,6 +18,7 @@ class UserStatus(Enum):
     ACTIVE = 'active'  # 在线
     INACTIVE = 'inactive'  # 离线
     BANNED = 'banned'  # 封禁
+    DELETED = 'deleted'  # 注销
 
     @classmethod
     def list(cls):

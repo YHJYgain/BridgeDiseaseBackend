@@ -40,8 +40,8 @@ class User(db.Model):
     username = db.Column(db.String(255), unique=True, nullable=False)  # 用户名，唯一
     email = db.Column(db.String(255), unique=True, nullable=False)  # 用户邮箱，唯一
     password = db.Column(db.String(255), nullable=False)  # 密码（加密）
-    first_name = db.Column(db.String(100))  # 名字
-    last_name = db.Column(db.String(100))  # 姓氏
+    first_name = db.Column(db.String(100), default="名字")  # 名字
+    last_name = db.Column(db.String(100), default="姓氏")  # 姓氏
     role = db.Column(db.Enum(UserRole), default=UserRole.USER, nullable=False)  # 用户角色
     avatar_path = db.Column(db.String(255))  # 头像路径
     phone = db.Column(db.String(20), unique=True)  # 手机号
@@ -50,6 +50,7 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 用户创建时间
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")),
                            onupdate=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 最后更新时间
+    deleted_at = db.Column(db.DateTime, nullable=True)  # 用户注销时间
 
     def __repr__(self):
         return (f"User(user_id={self.user_id}, "
@@ -63,7 +64,8 @@ class User(db.Model):
                 f"last_login={self.last_login}, "
                 f"status='{self.status.name}', "
                 f"created_at={self.created_at}, "
-                f"updated_at={self.updated_at})")
+                f"updated_at={self.updated_at}, "
+                f"deleted_at={self.deleted_at})")
 
     def to_dict(self):
         """
@@ -81,5 +83,6 @@ class User(db.Model):
             'last_login': self.last_login,
             'status': self.status.name,
             'created_at': self.created_at,
-            'updated_at': self.updated_at
+            'updated_at': self.updated_at,
+            'deleted_at': self.deleted_at
         }

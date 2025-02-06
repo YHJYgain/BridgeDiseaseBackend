@@ -21,9 +21,9 @@ def register():
     username = request.form.get('username')
     email = request.form.get('email')
     password = request.form.get('password')
-    first_name = request.form.get('first_name')
-    last_name = request.form.get('last_name')
-    role = request.form.get('role', 'user')  # 默认角色为 'user'
+    first_name = request.form.get('first_name', '名字')
+    last_name = request.form.get('last_name', '姓氏')
+    role = request.form.get('role', 'user')
     avatar_file = request.files.get('avatar_file')
     phone = request.form.get('phone')
 
@@ -35,46 +35,59 @@ def register():
         device_info=request.user_agent.string,
     )
 
+    # 根据用户名或邮箱查找用户
+    user = User.query.filter((User.username == username) | (User.email == email)).first()
+
     # 校验字段
     validation_checks = [
         (not username or not email or not password, "【注册失败】用户名、邮箱或密码为空"),
+        (user and user.status == UserStatus.BANNED, "【注册失败】该用户已被封禁"),
+        (user and (user.status != UserStatus.DELETED or not user.deleted_at),
+         f"【注册失败】该用户 {username}/{email} 已注册，请直接登录"),
         (not is_valid_email(email), f"【注册失败】无效的邮箱格式：{email}"),
         (role not in UserRole.list(), f"【注册失败】无效的角色：{role}，只限 'admin', 'developer', 'user'"),
         (avatar_file and not is_valid_avatar_file(avatar_file), "【注册失败】头像文件类型或大小不合规"),
-        (phone and not is_valid_phone(phone), f"【注册失败】无效的手机号格式：{phone}"),
-        (User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first(),
-         f"【注册失败】用户名 {username} 或邮箱 {email} 已注册")
+        (phone and not is_valid_phone(phone), f"【注册失败】无效的手机号格式：{phone}")
     ]
     for condition, message in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message)
             return jsonify({'operation': new_operation.to_dict()}), 400
 
-    # 加密密码
-    hashed_password = generate_password_hash(password)
+    if user:
+        # 已软删除用户，直接更新信息
+        if user.status == UserStatus.DELETED or user.deleted_at:
+            user.username = username
+            user.email = email
+            user.password = generate_password_hash(password)
+            user.first_name = first_name
+            user.last_name = last_name
+            user.role = role
+            user.avatar_path = handle_avatar_upload(avatar_file)
+            user.phone = phone
+            user.status = UserStatus.INACTIVE
+            user.deleted_at = None
+    else:
+        # 新用户，创建新记录
+        user = User(
+            username=username,
+            email=email,
+            password=generate_password_hash(password),
+            first_name=first_name,
+            last_name=last_name,
+            role=role,
+            avatar_path=handle_avatar_upload(avatar_file),
+            phone=phone,
+        )
+        db.session.add(user)
 
-    # 头像存储处理
-    avatar_path = handle_avatar_upload(avatar_file)
-
-    # 创建新用户
-    new_user = User(
-        username=username,
-        email=email,
-        password=hashed_password,
-        first_name=first_name,
-        last_name=last_name,
-        role=role,
-        avatar_path=avatar_path,
-        phone=phone,
-    )
-    db.session.add(new_user)
     db.session.commit()
 
-    # 提交操作记录
-    new_operation = handle_operation_success(new_operation, start_time, new_user.user_id)
+    # 记录操作
+    new_operation = handle_operation_success(new_operation, start_time, user.user_id)
 
-    current_app.logger.info(f"【注册成功】user: {new_user}")
-    return jsonify({'operation': new_operation.to_dict(), 'user': new_user.to_dict()}), 201
+    current_app.logger.info(f"【注册成功】user: {user}")
+    return jsonify({'operation': new_operation.to_dict(), 'user': user.to_dict()}), 201
 
 
 @user_routes.route('/login', methods=['POST'])
@@ -99,8 +112,10 @@ def login():
     # 校验字段
     validation_checks = [
         (not username_or_email or not password, "【登录失败】用户名或邮箱和密码是必填项"),
-        (not user, f"【登录失败】用户名或邮箱 {username_or_email} 不存在"),
-        (not check_password_hash(user.password, password), f"【登录失败】用户名或邮箱 {username_or_email} 密码错误")
+        (not user, f"【登录失败】该用户 {username_or_email} 尚未注册，请先注册"),
+        (user and (user.status == UserStatus.DELETED or user.deleted_at),
+         f"【登录失败】该用户 {username_or_email} 已注销"),
+        (not check_password_hash(user.password, password), "【登录失败】密码错误")
     ]
     for condition, message in validation_checks:
         if condition:
@@ -116,7 +131,7 @@ def login():
     access_token = create_access_token(identity=user.user_id)
     refresh_token = create_refresh_token(identity=user.user_id)
 
-    # 提交操作记录
+    # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, user.user_id)
 
     current_app.logger.info(f"【登录成功】user: {user}, access_token：{access_token}, refresh_token: {refresh_token}")
@@ -141,7 +156,7 @@ def logout():
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
     if not current_user:
-        failure_message = f"【登出失败】用户 ID: {current_user_id} 不存在"
+        failure_message = f"【登出失败】服务器数据异常，用户 ID: {current_user_id} 不存在"
         new_operation = handle_operation_failure(new_operation, start_time, failure_message)
         return jsonify({'operation': new_operation.to_dict()}), 400
 
@@ -150,7 +165,7 @@ def logout():
     current_user.status = UserStatus.INACTIVE
     db.session.commit()
 
-    # 提交操作记录
+    # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
     current_app.logger.info(f"【登出成功】user: {current_user}")
@@ -176,7 +191,7 @@ def refresh():
     # 生成新的 access token
     access_token = create_access_token(identity=current_user_id)
 
-    # 提交操作记录
+    # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
     current_app.logger.info(f"【刷新 token 成功】user_id: {current_user_id}, access_token：{access_token}")
@@ -200,11 +215,11 @@ def profile():
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
     if not current_user:
-        failure_message = f"【获取用户资料失败】用户 ID: {current_user_id} 不存在"
+        failure_message = f"【获取用户资料失败】服务器数据异常，用户 ID: {current_user_id} 不存在"
         new_operation = handle_operation_failure(new_operation, start_time, failure_message)
         return jsonify({'operation': new_operation.to_dict()}), 400
 
-    # 提交操作记录
+    # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
     current_app.logger.info(f"【获取用户资料成功】user: {current_user}")
@@ -228,17 +243,17 @@ def update_profile():
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
     if not current_user:
-        failure_message = f"【更新用户资料失败】用户 ID: {current_user_id} 不存在"
+        failure_message = f"【更新用户资料失败】服务器数据异常，用户 ID: {current_user_id} 不存在"
         new_operation = handle_operation_failure(new_operation, start_time, failure_message)
         return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 获取请求中的更新数据
-    username = request.form.get('username', current_user.username)
-    email = request.form.get('email', current_user.email)
-    first_name = request.form.get('first_name', current_user.first_name)
-    last_name = request.form.get('last_name', current_user.last_name)
+    username = request.form.get('username')
+    email = request.form.get('email')
+    first_name = request.form.get('first_name')
+    last_name = request.form.get('last_name')
     avatar_file = request.files.get('avatar_file')
-    phone = request.form.get('phone', current_user.phone)
+    phone = request.form.get('phone')
 
     # 校验必填字段和其他常见验证
     validation_checks = [
@@ -246,7 +261,7 @@ def update_profile():
         (avatar_file and not is_valid_avatar_file(avatar_file), "【更新用户资料失败】头像文件类型或大小不合规"),
         (phone and not is_valid_phone(phone), f"【更新用户资料失败】无效的手机号格式：{phone}"),
         (User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first(),
-         f"【更新用户资料失败】用户名 {username} 或邮箱 {email} 已存在")
+         f"【更新用户资料失败】用户 {username}/{email} 已存在")
     ]
     for condition, message in validation_checks:
         if condition:
@@ -265,7 +280,7 @@ def update_profile():
     current_user.phone = phone
     db.session.commit()
 
-    # 提交操作记录
+    # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
     current_app.logger.info(f"【更新用户资料成功】user: {current_user}")
@@ -293,7 +308,7 @@ def change_password():
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
     if not current_user:
-        failure_message = f"【修改密码失败】用户 ID: {current_user_id} 不存在"
+        failure_message = f"【修改密码失败】服务器数据异常，用户 ID: {current_user_id} 不存在"
         new_operation = handle_operation_failure(new_operation, start_time, failure_message)
         return jsonify({'operation': new_operation.to_dict()}), 400
 
@@ -311,9 +326,42 @@ def change_password():
     current_user.password = generate_password_hash(new_password)
     db.session.commit()
 
-    # 提交操作记录
+    # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
     current_app.logger.info(f"【修改密码成功】user: {current_user}")
     return jsonify(
         {'operation': new_operation.to_dict(), 'user': current_user.to_dict(), "old_password": current_password}), 200
+
+
+@user_routes.route('/delete_account', methods=['DELETE'])
+@jwt_required()
+def delete_account():
+    start_time = time.time()  # 记录操作开始时间
+
+    # 创建一个新的操作记录
+    new_operation = Operation(
+        operation_type=OperationType.DELETE,
+        description="删除账户",
+        ip_address=request.remote_addr,
+        device_info=request.user_agent.string,
+    )
+
+    # 获取当前用户的身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+    if not current_user:
+        failure_message = f"【删除账户失败】服务器数据异常，用户 ID: {current_user_id} 不存在"
+        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
+        return jsonify({'operation': new_operation.to_dict()}), 400
+
+    # 软删除用户
+    current_user.deleted_at = datetime.now(ZoneInfo("Asia/Shanghai"))
+    current_user.status = UserStatus.DELETED
+    db.session.commit()
+
+    # 记录操作
+    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
+
+    current_app.logger.info(f"【删除账户成功】user: {current_user}")
+    return jsonify({'operation': new_operation.to_dict(), 'user': current_user.to_dict()}), 200
