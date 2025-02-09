@@ -8,16 +8,19 @@ from moviepy import VideoFileClip
 from werkzeug.utils import secure_filename
 
 from app.constants import OperationType
-from app.models import Operation, User, Media, db
+from app.decorators import login_required
+from app.models import Operation, Media, db
 from app.routes import media_routes
 from app.utils import handle_operation_failure, is_valid_file_type, handle_file_upload, handle_operation_success
 
 
 @media_routes.route('/upload', methods=['POST'])
 @jwt_required()
+@login_required
 def upload():
     start_time = time.time()  # 记录操作开始时间
 
+    # 获取请求中的表单数据
     media_file = request.files.get('media_file')
     description = request.form.get('description', '暂无描述')
 
@@ -31,17 +34,12 @@ def upload():
 
     # 获取当前用户的身份（使用 access token）
     current_user_id = get_jwt_identity()
-    current_user = User.query.get(current_user_id)
 
-    # 校验字段
-    validation_checks = [
-        (not current_user, f"【上传媒体文件失败】服务器数据异常，用户 ID: {current_user_id} 不存在"),
-        (media_file and not is_valid_file_type(media_file), "【上传媒体文件失败】媒体文件类型不合规")
-    ]
-    for condition, message in validation_checks:
-        if condition:
-            new_operation = handle_operation_failure(new_operation, start_time, message)
-            return jsonify({'operation': new_operation.to_dict()}), 400
+    if media_file and not is_valid_file_type(media_file):
+        failure_message = "【上传媒体文件失败】媒体文件不合规"
+        new_operation = handle_operation_failure(new_operation, start_time, failure_message, current_user_id)
+        current_app.logger.info(failure_message)
+        return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 获取文件名并进行安全处理
     file_name = secure_filename(media_file.filename)
@@ -81,4 +79,7 @@ def upload():
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
     current_app.logger.info(f"【上传媒体文件成功】media: {new_media}")
-    return jsonify({'operation': new_operation.to_dict(), 'media': new_media.to_dict()}), 201
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'media': new_media.to_dict()
+    }), 201

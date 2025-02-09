@@ -7,6 +7,7 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app.constants import OperationType, UserRole, UserStatus
+from app.decorators import login_required
 from app.models import Operation, User, db
 from app.routes import user_routes
 from app.utils import is_valid_email, is_valid_avatar_file, is_valid_phone, handle_operation_failure, \
@@ -41,17 +42,18 @@ def register():
     # 校验字段
     validation_checks = [
         (not username or not email or not password, "【注册失败】用户名、邮箱或密码为空"),
-        (user and user.status == UserStatus.BANNED, "【注册失败】该用户已被封禁"),
+        (user and user.status == UserStatus.BANNED, f"【注册失败】该用户 {username}/{email} 已被封禁"),
         (user and (user.status != UserStatus.DELETED or not user.deleted_at),
          f"【注册失败】该用户 {username}/{email} 已注册，请直接登录"),
         (not is_valid_email(email), f"【注册失败】无效的邮箱格式：{email}"),
         (role not in UserRole.list(), f"【注册失败】无效的角色：{role}，只限 'admin', 'developer', 'user'"),
-        (avatar_file and not is_valid_avatar_file(avatar_file), "【注册失败】头像文件类型或大小不合规"),
+        (avatar_file and not is_valid_avatar_file(avatar_file), "【注册失败】头像文件不合规"),
         (phone and not is_valid_phone(phone), f"【注册失败】无效的手机号格式：{phone}")
     ]
     for condition, message in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message)
+            current_app.logger.info(message)
             return jsonify({'operation': new_operation.to_dict()}), 400
 
     if user:
@@ -62,7 +64,7 @@ def register():
             user.password = generate_password_hash(password)
             user.first_name = first_name
             user.last_name = last_name
-            user.role = role
+            user.role = UserRole(role)
             user.avatar_path = handle_file_upload(avatar_file, 'avatars')
             user.phone = phone
             user.status = UserStatus.INACTIVE
@@ -75,7 +77,7 @@ def register():
             password=generate_password_hash(password),
             first_name=first_name,
             last_name=last_name,
-            role=role,
+            role=UserRole(role),
             avatar_path=handle_file_upload(avatar_file, 'avatars'),
             phone=phone,
         )
@@ -86,8 +88,11 @@ def register():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, user.user_id)
 
-    current_app.logger.info(f"【注册成功】user: {user}")
-    return jsonify({'operation': new_operation.to_dict(), 'user': user.to_dict()}), 201
+    current_app.logger.info(f"【注册成功】new_user: {user}")
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'new_user': user.to_dict()
+    }), 201
 
 
 @user_routes.route('/login', methods=['POST'])
@@ -119,7 +124,9 @@ def login():
     ]
     for condition, message in validation_checks:
         if condition:
-            new_operation = handle_operation_failure(new_operation, start_time, message)
+            user_id = user.user_id if user is not None else None
+            new_operation = handle_operation_failure(new_operation, start_time, message, user_id)
+            current_app.logger.info(message)
             return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 更新用户的最后登录时间和状态
@@ -134,13 +141,19 @@ def login():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, user.user_id)
 
-    current_app.logger.info(f"【登录成功】user: {user}, access_token：{access_token}, refresh_token: {refresh_token}")
-    return jsonify({'operation': new_operation.to_dict(), 'user': user.to_dict(), 'access_token': access_token,
-                    'refresh_token': refresh_token}), 200
+    current_app.logger.info(
+        f"【登录成功】login_user: {user.username}, access_token：{access_token}, refresh_token: {refresh_token}")
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'login_user': user.to_dict(),
+        'access_token': access_token,
+        'refresh_token': refresh_token
+    }), 200
 
 
 @user_routes.route('/logout', methods=['POST'])
 @jwt_required()
+@login_required
 def logout():
     start_time = time.time()  # 记录操作开始时间
 
@@ -155,10 +168,6 @@ def logout():
     # 获取当前用户的身份（使用 access token）
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
-    if not current_user:
-        failure_message = f"【登出失败】服务器数据异常，用户 ID: {current_user_id} 不存在"
-        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
-        return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 更新用户的最后登录时间和状态
     current_user.last_logout = datetime.now(ZoneInfo("Asia/Shanghai"))
@@ -168,8 +177,11 @@ def logout():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【登出成功】user: {current_user}")
-    return jsonify({'operation': new_operation.to_dict(), 'user': current_user.to_dict()}), 200
+    current_app.logger.info(f"【登出成功】logout_user: {current_user.username}")
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'logout_user': current_user.to_dict()
+    }), 200
 
 
 @user_routes.route('/refresh', methods=['POST'])
@@ -187,6 +199,7 @@ def refresh():
 
     # 获取当前用户的身份（使用 refresh token）
     current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
 
     # 生成新的 access token
     access_token = create_access_token(identity=current_user_id)
@@ -194,12 +207,16 @@ def refresh():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【刷新 token 成功】user_id: {current_user_id}, access_token：{access_token}")
-    return jsonify({'operation': new_operation.to_dict(), 'access_token': access_token}), 200
+    current_app.logger.info(f"【刷新 token 成功】user: {current_user.username}, access_token：{access_token}")
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'access_token': access_token
+    }), 200
 
 
 @user_routes.route('/profile', methods=['GET'])
 @jwt_required()
+@login_required
 def profile():
     start_time = time.time()  # 记录操作开始时间
 
@@ -214,20 +231,20 @@ def profile():
     # 获取当前用户的身份（使用 access token）
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
-    if not current_user:
-        failure_message = f"【获取用户资料失败】服务器数据异常，用户 ID: {current_user_id} 不存在"
-        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
-        return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
     current_app.logger.info(f"【获取用户资料成功】user: {current_user}")
-    return jsonify({'operation': new_operation.to_dict(), 'user': current_user.to_dict()}), 200
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'current_user': current_user.to_dict()
+    }), 200
 
 
 @user_routes.route('/update', methods=['PUT'])
 @jwt_required()
+@login_required
 def update():
     start_time = time.time()  # 记录操作开始时间
 
@@ -253,7 +270,6 @@ def update():
 
     # 校验字段
     validation_checks = [
-        (not current_user, f"【更新用户资料失败】服务器数据异常，用户 ID: {current_user_id} 不存在"),
         (not username or not email, "【更新用户资料失败】用户名或邮箱为空"),
         (not is_valid_email(email), f"【更新用户资料失败】无效的邮箱格式：{email}"),
         (avatar_file and not is_valid_avatar_file(avatar_file), "【更新用户资料失败】头像文件类型或大小不合规"),
@@ -263,8 +279,9 @@ def update():
     ]
     for condition, message in validation_checks:
         if condition:
-            new_operation = handle_operation_failure(new_operation, start_time, message)
-            return jsonify({'operation': new_operation.to_dict(), 'user': current_user.to_dict()}), 400
+            new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
+            current_app.logger.info(message)
+            return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 更新用户信息
     current_user.username = username
@@ -279,11 +296,15 @@ def update():
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
     current_app.logger.info(f"【更新用户资料成功】user: {current_user}")
-    return jsonify({'operation': new_operation.to_dict(), 'user': current_user.to_dict()}), 200
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'updated_user': current_user.to_dict()
+    }), 200
 
 
 @user_routes.route('/change_password', methods=['PUT'])
 @jwt_required()
+@login_required
 def change_password():
     start_time = time.time()  # 记录操作开始时间
 
@@ -305,14 +326,14 @@ def change_password():
 
     # 校验字段
     validation_checks = [
-        (not current_user, f"【修改密码失败】服务器数据异常，用户 ID: {current_user_id} 不存在"),
         (not current_password or not new_password, "【修改密码失败】当前密码或新密码为空"),
         (not check_password_hash(current_user.password, current_password), "【修改密码失败】当前密码错误")
     ]
     for condition, message in validation_checks:
         if condition:
-            new_operation = handle_operation_failure(new_operation, start_time, message)
-            return jsonify({'operation': new_operation.to_dict(), 'user': current_user.to_dict()}), 400
+            new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
+            current_app.logger.info(message)
+            return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 更新密码
     current_user.password = generate_password_hash(new_password)
@@ -321,13 +342,17 @@ def change_password():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【修改密码成功】user: {current_user}, old_password: {current_password}")
-    return jsonify(
-        {'operation': new_operation.to_dict(), 'user': current_user.to_dict(), "old_password": current_password}), 200
+    current_app.logger.info(f"【修改密码成功】user: {current_user.username}, old_password: {current_password}")
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'current_user': current_user.to_dict(),
+        "old_password": current_password
+    }), 200
 
 
 @user_routes.route('/delete', methods=['DELETE'])
 @jwt_required()
+@login_required
 def delete():
     start_time = time.time()  # 记录操作开始时间
 
@@ -342,10 +367,6 @@ def delete():
     # 获取当前用户的身份（使用 access token）
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
-    if not current_user:
-        failure_message = f"【删除账户失败】服务器数据异常，用户 ID: {current_user_id} 不存在"
-        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
-        return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 软删除用户
     current_user.deleted_at = datetime.now(ZoneInfo("Asia/Shanghai"))
@@ -355,5 +376,8 @@ def delete():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【删除账户成功】user: {current_user}")
-    return jsonify({'operation': new_operation.to_dict(), 'user': current_user.to_dict()}), 200
+    current_app.logger.info(f"【删除账户成功】deleted_user: {current_user.username}")
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'deleted_user': current_user.to_dict()
+    }), 200
