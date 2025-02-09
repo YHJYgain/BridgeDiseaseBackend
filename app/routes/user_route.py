@@ -10,7 +10,7 @@ from app.constants import OperationType, UserRole, UserStatus
 from app.models import Operation, User, db
 from app.routes import user_routes
 from app.utils import is_valid_email, is_valid_avatar_file, is_valid_phone, handle_operation_failure, \
-    handle_avatar_upload, handle_operation_success
+    handle_operation_success, handle_file_upload
 
 
 @user_routes.route('/register', methods=['POST'])
@@ -63,7 +63,7 @@ def register():
             user.first_name = first_name
             user.last_name = last_name
             user.role = role
-            user.avatar_path = handle_avatar_upload(avatar_file)
+            user.avatar_path = handle_file_upload(avatar_file, 'avatars')
             user.phone = phone
             user.status = UserStatus.INACTIVE
             user.deleted_at = None
@@ -76,7 +76,7 @@ def register():
             first_name=first_name,
             last_name=last_name,
             role=role,
-            avatar_path=handle_avatar_upload(avatar_file),
+            avatar_path=handle_file_upload(avatar_file, 'avatars'),
             phone=phone,
         )
         db.session.add(user)
@@ -231,6 +231,14 @@ def profile():
 def update_profile():
     start_time = time.time()  # 记录操作开始时间
 
+    # 获取请求中的更新数据
+    username = request.form.get('username')
+    email = request.form.get('email')
+    first_name = request.form.get('first_name')
+    last_name = request.form.get('last_name')
+    avatar_file = request.files.get('avatar_file')
+    phone = request.form.get('phone')
+
     # 创建一个新的操作记录
     new_operation = Operation(
         operation_type=OperationType.UPDATE,
@@ -242,21 +250,11 @@ def update_profile():
     # 获取当前用户的身份（使用 access token）
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
-    if not current_user:
-        failure_message = f"【更新用户资料失败】服务器数据异常，用户 ID: {current_user_id} 不存在"
-        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
-        return jsonify({'operation': new_operation.to_dict()}), 400
 
-    # 获取请求中的更新数据
-    username = request.form.get('username')
-    email = request.form.get('email')
-    first_name = request.form.get('first_name')
-    last_name = request.form.get('last_name')
-    avatar_file = request.files.get('avatar_file')
-    phone = request.form.get('phone')
-
-    # 校验必填字段和其他常见验证
+    # 校验字段
     validation_checks = [
+        (not current_user, f"【更新用户资料失败】服务器数据异常，用户 ID: {current_user_id} 不存在"),
+        (not username or not email, "【更新用户资料失败】用户名或邮箱为空"),
         (not is_valid_email(email), f"【更新用户资料失败】无效的邮箱格式：{email}"),
         (avatar_file and not is_valid_avatar_file(avatar_file), "【更新用户资料失败】头像文件类型或大小不合规"),
         (phone and not is_valid_phone(phone), f"【更新用户资料失败】无效的手机号格式：{phone}"),
@@ -268,15 +266,12 @@ def update_profile():
             new_operation = handle_operation_failure(new_operation, start_time, message)
             return jsonify({'operation': new_operation.to_dict(), 'user': current_user.to_dict()}), 400
 
-    # 头像存储处理
-    avatar_path = handle_avatar_upload(avatar_file)
-
     # 更新用户信息
     current_user.username = username
     current_user.email = email
     current_user.first_name = first_name
     current_user.last_name = last_name
-    current_user.avatar_path = avatar_path
+    current_user.avatar_path = handle_file_upload(avatar_file, 'avatars')
     current_user.phone = phone
     db.session.commit()
 
@@ -307,13 +302,10 @@ def change_password():
     # 获取当前用户的身份（使用 access token）
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
-    if not current_user:
-        failure_message = f"【修改密码失败】服务器数据异常，用户 ID: {current_user_id} 不存在"
-        new_operation = handle_operation_failure(new_operation, start_time, failure_message)
-        return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 校验字段
     validation_checks = [
+        (not current_user, f"【修改密码失败】服务器数据异常，用户 ID: {current_user_id} 不存在"),
         (not current_password or not new_password, "【修改密码失败】当前密码或新密码为空"),
         (not check_password_hash(current_user.password, current_password), "【修改密码失败】当前密码错误")
     ]

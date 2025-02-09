@@ -9,7 +9,7 @@ class Media(db.Model):
     媒体模型类，表示数据库中的 'media' 表。
 
     该类存储与用户相关联的媒体文件的基本信息，如文件名、路径、文件类型、分辨率等。
-    媒体文件可以是图片或视频，并关联到检测任务记录。每个文件只能属于一个用户，且可进行状态管理。
+    媒体文件可以是图片或视频，并关联到用户。每个文件只能属于一个用户，且可进行状态管理。
 
     Attributes:
         media_id (int): 媒体文件的唯一标识符（主键）。
@@ -32,8 +32,8 @@ class Media(db.Model):
     media_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 媒体 ID
     file_name = db.Column(db.String(255), nullable=False)  # 文件名
     file_path = db.Column(db.String(255), nullable=False)  # 文件路径
-    description = db.Column(db.Text)  # 媒体描述
-    file_size = db.Column(db.Integer)  # 文件大小（字节）
+    description = db.Column(db.Text, default='暂无描述')  # 媒体描述
+    file_size = db.Column(db.Integer)  # 文件大小（KB）
     file_type = db.Column(db.String(50), nullable=False)  # 文件类型（图片或视频）
     resolution_width = db.Column(db.Integer)  # 分辨率宽度
     resolution_height = db.Column(db.Integer)  # 分辨率高度

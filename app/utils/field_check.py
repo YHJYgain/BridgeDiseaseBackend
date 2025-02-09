@@ -3,6 +3,10 @@ import re
 from flask import current_app
 
 
+def is_valid_file_type(file):
+    return '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']
+
+
 # 头像文件校验
 def is_valid_avatar_file(avatar_file):
     """
@@ -12,15 +16,14 @@ def is_valid_avatar_file(avatar_file):
     :return: 如果合规，返回 True，否则返回 False。
     """
     # 读取头像文件配置
-    allowed_extensions = current_app.config['ALLOWED_EXTENSIONS']
-    max_avatar_size = current_app.config['MAX_AVATAR_SIZE'] / (1024 * 1024)  # MB
+    max_avatar_size = current_app.config['MAX_AVATAR_SIZE'] / (1024 ** 2)  # MB
 
     # 校验文件类型
-    if not ('.' in avatar_file.filename and avatar_file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
+    if not is_valid_file_type(avatar_file):
         return False
 
     # 校验文件大小
-    avatar_size = len(avatar_file.read()) / (1024 * 1024)  # MB
+    avatar_size = len(avatar_file.read()) / (1024 ** 2)  # MB
     if avatar_size > max_avatar_size:
         return False
 
