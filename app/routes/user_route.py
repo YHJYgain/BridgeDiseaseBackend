@@ -321,7 +321,7 @@ def change_password():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【修改密码成功】user: {current_user}")
+    current_app.logger.info(f"【修改密码成功】user: {current_user}, old_password: {current_password}")
     return jsonify(
         {'operation': new_operation.to_dict(), 'user': current_user.to_dict(), "old_password": current_password}), 200
 

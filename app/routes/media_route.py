@@ -15,7 +15,7 @@ from app.utils import handle_operation_failure, is_valid_file_type, handle_file_
 
 @media_routes.route('/upload', methods=['POST'])
 @jwt_required()
-def upload_media():
+def upload():
     start_time = time.time()  # 记录操作开始时间
 
     media_file = request.files.get('media_file')
