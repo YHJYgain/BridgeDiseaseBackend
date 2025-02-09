@@ -226,9 +226,9 @@ def profile():
     return jsonify({'operation': new_operation.to_dict(), 'user': current_user.to_dict()}), 200
 
 
-@user_routes.route('/update_profile', methods=['PUT'])
+@user_routes.route('/update', methods=['PUT'])
 @jwt_required()
-def update_profile():
+def update():
     start_time = time.time()  # 记录操作开始时间
 
     # 获取请求中的更新数据
@@ -326,9 +326,9 @@ def change_password():
         {'operation': new_operation.to_dict(), 'user': current_user.to_dict(), "old_password": current_password}), 200
 
 
-@user_routes.route('/delete_account', methods=['DELETE'])
+@user_routes.route('/delete', methods=['DELETE'])
 @jwt_required()
-def delete_account():
+def delete():
     start_time = time.time()  # 记录操作开始时间
 
     # 创建一个新的操作记录
