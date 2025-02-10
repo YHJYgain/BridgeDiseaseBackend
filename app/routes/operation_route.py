@@ -7,7 +7,7 @@ from app.constants import OperationType
 from app.decorators import admin_required, login_required
 from app.models import Operation, User
 from app.routes import operation_routes
-from app.utils import handle_operation_success, handle_operation_failure, adjust_page_if_needed
+from app.utils import handle_operation_success, handle_operation_failure, adjust_page_if_needed, get_pagination_params
 
 
 @operation_routes.route('/operations', methods=['GET'])
@@ -17,8 +17,7 @@ def current_user_operations():
     start_time = time.time()  # 记录操作开始时间
 
     # 获取分页参数（默认为第 1 页，每页 5 条记录）
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 5, type=int)
+    page, per_page = get_pagination_params()
 
     # 创建一个新的操作记录
     new_operation = Operation(
@@ -47,7 +46,7 @@ def current_user_operations():
         'total': operations_total,
         'per_page': per_page,
         'page': page,
-        'pages': pages
+        'pages': pages,
     }), 200
 
 
@@ -59,8 +58,7 @@ def user_operations(user_id):
     start_time = time.time()  # 记录操作开始时间
 
     # 获取分页参数（默认为第 1 页，每页 5 条记录）
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 5, type=int)
+    page, per_page = get_pagination_params()
 
     # 创建一个新的操作记录
     new_operation = Operation(
@@ -97,5 +95,5 @@ def user_operations(user_id):
         'total': operations_total,
         'per_page': per_page,
         'page': page,
-        'pages': pages
+        'pages': pages,
     }), 200

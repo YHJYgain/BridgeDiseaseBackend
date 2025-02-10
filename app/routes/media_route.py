@@ -11,7 +11,8 @@ from app.constants import OperationType
 from app.decorators import login_required
 from app.models import Operation, Media, db
 from app.routes import media_routes
-from app.utils import handle_operation_failure, is_valid_file_type, handle_file_upload, handle_operation_success
+from app.utils import handle_operation_failure, is_valid_file_type, handle_file_upload, handle_operation_success, \
+    adjust_page_if_needed, get_pagination_params
 
 
 @media_routes.route('/upload', methods=['POST'])
@@ -47,10 +48,10 @@ def upload():
     # 保存文件到指定目录（返回相对路径）
     file_path = handle_file_upload(media_file, 'medias')
 
-    # 获取文件的类型（文件后缀）
+    # 获取文件类型（文件后缀）
     file_type = file_name.rsplit('.', 1)[1].lower()
 
-    # 绝对路径
+    # 获取文件绝对路径
     absolute_path = os.path.join(current_app.root_path, file_path)
 
     # 获取分辨率
@@ -70,7 +71,7 @@ def upload():
         file_type=file_type,
         resolution_width=resolution_width,
         resolution_height=resolution_height,
-        owner_id=current_user_id
+        owner_id=current_user_id,
     )
     db.session.add(new_media)
     db.session.commit()
@@ -81,5 +82,45 @@ def upload():
     current_app.logger.info(f"【上传媒体文件成功】new_media: {new_media}")
     return jsonify({
         'operation': new_operation.to_dict(),
-        'new_media': new_media.to_dict()
+        'new_media': new_media.to_dict(),
     }), 201
+
+
+@media_routes.route('/medias', methods=['GET'])
+@jwt_required()
+@login_required
+def current_user_medias():
+    start_time = time.time()  # 记录操作开始时间
+
+    # 获取分页参数（默认为第 1 页，每页 5 条记录）
+    page, per_page = get_pagination_params()
+
+    # 创建一个新的操作记录
+    new_operation = Operation(
+        operation_type=OperationType.READ,
+        description="获取当前用户媒体文件",
+        ip_address=request.remote_addr,
+        device_info=request.user_agent.string,
+    )
+
+    # 获取当前用户的身份（使用 access token）
+    current_user_id = get_jwt_identity()
+
+    # 获取当前用户的操作日志
+    query = Media.query.filter_by(owner_id=current_user_id)
+    page, medias_total, pages = adjust_page_if_needed(query, page, per_page)
+    medias = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    # 记录操作
+    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
+
+    current_app.logger.info(
+        f"【获取当前用户媒体文件成功】total: {medias_total}, per_page: {per_page}, page: {page}, pages: {pages}, medias: {[media.to_dict() for media in medias]}")
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'medias': [media.to_dict() for media in medias],
+        'total': medias_total,
+        'per_page': per_page,
+        'page': page,
+        'pages': pages,
+    }), 200

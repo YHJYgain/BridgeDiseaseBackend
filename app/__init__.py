@@ -3,12 +3,12 @@ from datetime import datetime
 from logging.config import dictConfig
 
 from flask import Flask
-from flask_jwt_extended import JWTManager
 
 from .config import Config
 from .errors import *
 from .models import init_db
 from .routes import register_routes
+from .utils import init_jwt
 
 
 def create_app():
@@ -27,8 +27,8 @@ def create_app():
     app.config.from_object(Config)
     app.logger.info(f'初始化服务配置：{dict(app.config)}')
 
-    # 初始化 JWTManager
-    jwt = JWTManager(app)
+    # 初始化 JWT
+    init_jwt(app)
 
     # 初始化数据库
     init_db(app)

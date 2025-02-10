@@ -48,7 +48,7 @@ def register():
         (not is_valid_email(email), f"【注册失败】无效的邮箱格式：{email}"),
         (role not in UserRole.list(), f"【注册失败】无效的角色：{role}，只限 'admin', 'developer', 'user'"),
         (avatar_file and not is_valid_avatar_file(avatar_file), "【注册失败】头像文件不合规"),
-        (phone and not is_valid_phone(phone), f"【注册失败】无效的手机号格式：{phone}")
+        (phone and not is_valid_phone(phone), f"【注册失败】无效的手机号格式：{phone}"),
     ]
     for condition, message in validation_checks:
         if condition:
@@ -91,7 +91,7 @@ def register():
     current_app.logger.info(f"【注册成功】new_user: {user}")
     return jsonify({
         'operation': new_operation.to_dict(),
-        'new_user': user.to_dict()
+        'new_user': user.to_dict(),
     }), 201
 
 
@@ -120,7 +120,7 @@ def login():
         (not user, f"【登录失败】该用户 {username_or_email} 尚未注册，请先注册"),
         (user and (user.status == UserStatus.DELETED or user.deleted_at),
          f"【登录失败】该用户 {username_or_email} 已注销"),
-        (user and not check_password_hash(user.password, password), "【登录失败】密码错误")
+        (user and not check_password_hash(user.password, password), "【登录失败】密码错误"),
     ]
     for condition, message in validation_checks:
         if condition:
@@ -147,7 +147,7 @@ def login():
         'operation': new_operation.to_dict(),
         'login_user': user.to_dict(),
         'access_token': access_token,
-        'refresh_token': refresh_token
+        'refresh_token': refresh_token,
     }), 200
 
 
@@ -180,7 +180,7 @@ def logout():
     current_app.logger.info(f"【登出成功】logout_user: {current_user.username}")
     return jsonify({
         'operation': new_operation.to_dict(),
-        'logout_user': current_user.to_dict()
+        'logout_user': current_user.to_dict(),
     }), 200
 
 
@@ -210,7 +210,7 @@ def refresh():
     current_app.logger.info(f"【刷新 token 成功】user: {current_user.username}, access_token：{access_token}")
     return jsonify({
         'operation': new_operation.to_dict(),
-        'access_token': access_token
+        'access_token': access_token,
     }), 200
 
 
@@ -238,7 +238,7 @@ def profile():
     current_app.logger.info(f"【获取用户资料成功】user: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
-        'current_user': current_user.to_dict()
+        'current_user': current_user.to_dict(),
     }), 200
 
 
@@ -275,7 +275,7 @@ def update():
         (avatar_file and not is_valid_avatar_file(avatar_file), "【更新用户资料失败】头像文件类型或大小不合规"),
         (phone and not is_valid_phone(phone), f"【更新用户资料失败】无效的手机号格式：{phone}"),
         (User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first(),
-         f"【更新用户资料失败】用户 {username}/{email} 已存在")
+         f"【更新用户资料失败】用户 {username}/{email} 已存在"),
     ]
     for condition, message in validation_checks:
         if condition:
@@ -298,7 +298,7 @@ def update():
     current_app.logger.info(f"【更新用户资料成功】user: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
-        'updated_user': current_user.to_dict()
+        'updated_user': current_user.to_dict(),
     }), 200
 
 
@@ -327,7 +327,7 @@ def change_password():
     # 校验字段
     validation_checks = [
         (not current_password or not new_password, "【修改密码失败】当前密码或新密码为空"),
-        (not check_password_hash(current_user.password, current_password), "【修改密码失败】当前密码错误")
+        (not check_password_hash(current_user.password, current_password), "【修改密码失败】当前密码错误"),
     ]
     for condition, message in validation_checks:
         if condition:
@@ -346,7 +346,7 @@ def change_password():
     return jsonify({
         'operation': new_operation.to_dict(),
         'current_user': current_user.to_dict(),
-        "old_password": current_password
+        "old_password": current_password,
     }), 200
 
 
@@ -379,5 +379,5 @@ def delete():
     current_app.logger.info(f"【删除账户成功】deleted_user: {current_user.username}")
     return jsonify({
         'operation': new_operation.to_dict(),
-        'deleted_user': current_user.to_dict()
+        'deleted_user': current_user.to_dict(),
     }), 200
