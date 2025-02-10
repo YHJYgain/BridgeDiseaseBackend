@@ -38,7 +38,7 @@ def upload():
     if media_file and not is_valid_file_type(media_file):
         failure_message = "【上传媒体文件失败】媒体文件不合规"
         new_operation = handle_operation_failure(new_operation, start_time, failure_message, current_user_id)
-        current_app.logger.info(failure_message)
+        current_app.logger.error(failure_message)
         return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 获取文件名并进行安全处理
@@ -78,8 +78,8 @@ def upload():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【上传媒体文件成功】media: {new_media}")
+    current_app.logger.info(f"【上传媒体文件成功】new_media: {new_media}")
     return jsonify({
         'operation': new_operation.to_dict(),
-        'media': new_media.to_dict()
+        'new_media': new_media.to_dict()
     }), 201

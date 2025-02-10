@@ -53,7 +53,7 @@ def register():
     for condition, message in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message)
-            current_app.logger.info(message)
+            current_app.logger.error(message)
             return jsonify({'operation': new_operation.to_dict()}), 400
 
     if user:
@@ -120,13 +120,13 @@ def login():
         (not user, f"【登录失败】该用户 {username_or_email} 尚未注册，请先注册"),
         (user and (user.status == UserStatus.DELETED or user.deleted_at),
          f"【登录失败】该用户 {username_or_email} 已注销"),
-        (not check_password_hash(user.password, password), "【登录失败】密码错误")
+        (user and not check_password_hash(user.password, password), "【登录失败】密码错误")
     ]
     for condition, message in validation_checks:
         if condition:
             user_id = user.user_id if user is not None else None
             new_operation = handle_operation_failure(new_operation, start_time, message, user_id)
-            current_app.logger.info(message)
+            current_app.logger.error(message)
             return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 更新用户的最后登录时间和状态
@@ -280,7 +280,7 @@ def update():
     for condition, message in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
-            current_app.logger.info(message)
+            current_app.logger.error(message)
             return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 更新用户信息
@@ -332,7 +332,7 @@ def change_password():
     for condition, message in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
-            current_app.logger.info(message)
+            current_app.logger.error(message)
             return jsonify({'operation': new_operation.to_dict()}), 400
 
     # 更新密码

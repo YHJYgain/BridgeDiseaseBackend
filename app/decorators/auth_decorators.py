@@ -27,7 +27,7 @@ def login_required(f):
         if not current_user:
             failure_message = f"【登录用户验证失败】服务器数据异常，用户 ID: {current_user_id} 不存在"
             new_operation = handle_operation_failure(new_operation, start_time, failure_message)
-            current_app.logger.info(failure_message)
+            current_app.logger.error(failure_message)
             return jsonify({'operation': new_operation.to_dict()}), 404
         return f(*args, **kwargs)
 
@@ -53,7 +53,7 @@ def admin_required(f):
         if current_user.role != UserRole.ADMIN:
             failure_message = f"【权限验证失败】当前登录用户非管理员，权限不足"
             new_operation = handle_operation_failure(new_operation, start_time, failure_message, current_user_id)
-            current_app.logger.info(failure_message)
+            current_app.logger.error(failure_message)
             return jsonify({'operation': new_operation.to_dict()}), 401
         return f(*args, **kwargs)
 
