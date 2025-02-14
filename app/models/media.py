@@ -20,7 +20,8 @@ class Media(db.Model):
         file_type (str): 媒体文件的类型，通常为图片或视频。
         resolution_width (int): 媒体文件的宽度（像素）。
         resolution_height (int): 媒体文件的高度（像素）。
-        upload_time (datetime): 媒体文件的上传时间，默认为当前时间。
+        upload_at (datetime): 媒体文件的上传时间，默认为当前时间。
+        updated_at (datetime): 媒体文件的最后更新时间，默认为当前时间，并在更新时自动更新。
         owner_id (int): 所属用户的唯一标识符（外键）。
 
     Relationships:
@@ -37,7 +38,9 @@ class Media(db.Model):
     file_type = db.Column(db.String(50), nullable=False)  # 文件类型（图片或视频）
     resolution_width = db.Column(db.Integer)  # 分辨率宽度
     resolution_height = db.Column(db.Integer)  # 分辨率高度
-    upload_time = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 上传时间
+    upload_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 上传时间
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")),
+                           onupdate=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 最后更新时间
     owner_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)  # 所属用户 ID（外键）
 
     # 设置与 User 表的关系：一份媒体文件只属于一个用户

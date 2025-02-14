@@ -113,6 +113,7 @@ def login():
 
     # 根据用户名或邮箱查找用户
     user = User.query.filter((User.username == username_or_email) | (User.email == username_or_email)).first()
+    user_id = user.user_id if user is not None else None
 
     # 校验字段
     validation_checks = [
@@ -124,7 +125,6 @@ def login():
     ]
     for condition, message, code in validation_checks:
         if condition:
-            user_id = user.user_id if user is not None else None
             new_operation = handle_operation_failure(new_operation, start_time, message, user_id)
             current_app.logger.error(message)
             return jsonify({'operation': new_operation.to_dict()}), code
@@ -170,7 +170,7 @@ def logout():
     current_user = User.query.get(current_user_id)
 
     # 更新用户的最后登录时间和状态
-    current_user.last_logout = datetime.now(ZoneInfo("Asia/Shanghai"))
+    current_user.last_login = datetime.now(ZoneInfo("Asia/Shanghai"))
     current_user.status = UserStatus.INACTIVE
     db.session.commit()
 
@@ -235,7 +235,7 @@ def profile():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【获取用户资料成功】user: {current_user}")
+    current_app.logger.info(f"【获取用户资料成功】current_user: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'current_user': current_user.to_dict(),
@@ -295,7 +295,7 @@ def update():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【更新用户资料成功】user: {current_user}")
+    current_app.logger.info(f"【更新用户资料成功】updated_user: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'updated_user': current_user.to_dict(),
@@ -342,7 +342,7 @@ def change_password():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【修改密码成功】user: {current_user.username}, old_password: {current_password}")
+    current_app.logger.info(f"【修改密码成功】current_user: {current_user.username}, old_password: {current_password}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'current_user': current_user.to_dict(),
