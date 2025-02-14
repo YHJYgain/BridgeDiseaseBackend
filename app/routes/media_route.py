@@ -7,8 +7,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from moviepy import VideoFileClip
 from werkzeug.utils import secure_filename
 
-from app.constants import OperationType
-from app.decorators import login_required, admin_required
+from app.constants import OperationType, UserRole
+from app.decorators import login_required
 from app.models import Operation, Media, db, User
 from app.routes import media_routes
 from app.utils import handle_operation_failure, is_valid_file_type, handle_file_upload, handle_operation_success, \
@@ -85,51 +85,9 @@ def upload():
         'new_media': new_media.to_dict(),
     }), 201
 
-
-@media_routes.route('/medias', methods=['GET'])
-@jwt_required()
-@login_required
-def current_user_medias():
-    start_time = time.time()  # 记录操作开始时间
-
-    # 获取分页参数（默认为第 1 页，每页 5 条记录）
-    page, per_page = get_pagination_params()
-
-    # 创建一个新的操作记录
-    new_operation = Operation(
-        operation_type=OperationType.READ,
-        description="获取当前用户媒体文件",
-        ip_address=request.remote_addr,
-        device_info=request.user_agent.string,
-    )
-
-    # 获取当前用户的身份（使用 access token）
-    current_user_id = get_jwt_identity()
-
-    # 获取当前用户媒体文件
-    query = Media.query.filter_by(owner_id=current_user_id)
-    page, medias_total, pages = adjust_page_if_needed(query, page, per_page)
-    medias = query.paginate(page=page, per_page=per_page, error_out=False)
-
-    # 记录操作
-    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
-
-    current_app.logger.info(
-        f"【获取当前用户媒体文件成功】total: {medias_total}, per_page: {per_page}, page: {page}, pages: {pages}, medias: {[media.to_dict() for media in medias]}")
-    return jsonify({
-        'operation': new_operation.to_dict(),
-        'medias': [media.to_dict() for media in medias],
-        'total': medias_total,
-        'per_page': per_page,
-        'page': page,
-        'pages': pages,
-    }), 200
-
-
 @media_routes.route('/medias/<int:user_id>', methods=['GET'])
 @jwt_required()
 @login_required
-@admin_required
 def user_medias(user_id):
     start_time = time.time()  # 记录操作开始时间
 
@@ -146,14 +104,22 @@ def user_medias(user_id):
 
     # 获取当前用户的身份（使用 access token）
     current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
 
-    # 验证指定用户
+    # 获取指定用户身份
     user = User.query.get(user_id)
-    if not user:
-        failure_message = f"【获取用户 ID={user_id} 媒体文件失败】服务器数据异常，用户不存在"
-        new_operation = handle_operation_failure(new_operation, start_time, failure_message, current_user_id)
-        current_app.logger.error(failure_message)
-        return jsonify({'operation': new_operation.to_dict()}), 404
+
+    # 校验字段
+    validation_checks = [
+        (not user, f"【获取用户 ID={user_id} 媒体文件失败】服务器数据异常，用户不存在", 404),
+        (current_user_id != user_id and current_user.role != UserRole.ADMIN,
+         f"【获取用户 ID={user_id} 媒体文件失败】当前登录用户非管理员，权限不足", 403),
+    ]
+    for condition, message, code in validation_checks:
+        if condition:
+            new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
+            current_app.logger.error(message)
+            return jsonify({'operation': new_operation.to_dict()}), code
 
     # 获取指定用户媒体文件
     query = Media.query.filter_by(owner_id=user_id)

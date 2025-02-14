@@ -41,20 +41,20 @@ def register():
 
     # 校验字段
     validation_checks = [
-        (not username or not email or not password, "【注册失败】用户名、邮箱或密码为空"),
-        (user and user.status == UserStatus.BANNED, f"【注册失败】该用户 {username}/{email} 已被封禁"),
+        (not username or not email or not password, "【注册失败】用户名、邮箱或密码为空", 400),
+        (user and user.status == UserStatus.BANNED, f"【注册失败】该用户 {username}/{email} 已被封禁", 403),
         (user and (user.status != UserStatus.DELETED or not user.deleted_at),
-         f"【注册失败】该用户 {username}/{email} 已注册，请直接登录"),
-        (not is_valid_email(email), f"【注册失败】无效的邮箱格式：{email}"),
-        (role not in UserRole.list(), f"【注册失败】无效的角色：{role}，只限 'admin', 'developer', 'user'"),
-        (avatar_file and not is_valid_avatar_file(avatar_file), "【注册失败】头像文件不合规"),
-        (phone and not is_valid_phone(phone), f"【注册失败】无效的手机号格式：{phone}"),
+         f"【注册失败】该用户 {username}/{email} 已注册，请直接登录", 400),
+        (not is_valid_email(email), f"【注册失败】无效的邮箱格式：{email}", 400),
+        (role not in UserRole.list(), f"【注册失败】无效的角色：{role}，只限 'admin', 'developer', 'user'", 400),
+        (avatar_file and not is_valid_avatar_file(avatar_file), "【注册失败】头像文件不合规", 400),
+        (phone and not is_valid_phone(phone), f"【注册失败】无效的手机号格式：{phone}", 400),
     ]
-    for condition, message in validation_checks:
+    for condition, message, code in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message)
             current_app.logger.error(message)
-            return jsonify({'operation': new_operation.to_dict()}), 400
+            return jsonify({'operation': new_operation.to_dict()}), code
 
     if user:
         # 已软删除用户，直接更新信息
@@ -116,18 +116,18 @@ def login():
 
     # 校验字段
     validation_checks = [
-        (not username_or_email or not password, "【登录失败】用户名或邮箱和密码是必填项"),
-        (not user, f"【登录失败】该用户 {username_or_email} 尚未注册，请先注册"),
+        (not username_or_email or not password, "【登录失败】用户名或邮箱和密码是必填项", 400),
+        (not user, f"【登录失败】该用户 {username_or_email} 尚未注册，请先注册", 400),
         (user and (user.status == UserStatus.DELETED or user.deleted_at),
-         f"【登录失败】该用户 {username_or_email} 已注销"),
-        (user and not check_password_hash(user.password, password), "【登录失败】密码错误"),
+         f"【登录失败】该用户 {username_or_email} 已注销", 400),
+        (user and not check_password_hash(user.password, password), "【登录失败】密码错误", 400),
     ]
-    for condition, message in validation_checks:
+    for condition, message, code in validation_checks:
         if condition:
             user_id = user.user_id if user is not None else None
             new_operation = handle_operation_failure(new_operation, start_time, message, user_id)
             current_app.logger.error(message)
-            return jsonify({'operation': new_operation.to_dict()}), 400
+            return jsonify({'operation': new_operation.to_dict()}), code
 
     # 更新用户的最后登录时间和状态
     user.last_login = datetime.now(ZoneInfo("Asia/Shanghai"))
@@ -270,18 +270,18 @@ def update():
 
     # 校验字段
     validation_checks = [
-        (not username or not email, "【更新用户资料失败】用户名或邮箱为空"),
-        (not is_valid_email(email), f"【更新用户资料失败】无效的邮箱格式：{email}"),
-        (avatar_file and not is_valid_avatar_file(avatar_file), "【更新用户资料失败】头像文件类型或大小不合规"),
-        (phone and not is_valid_phone(phone), f"【更新用户资料失败】无效的手机号格式：{phone}"),
+        (not username or not email, "【更新用户资料失败】用户名或邮箱为空", 400),
+        (not is_valid_email(email), f"【更新用户资料失败】无效的邮箱格式：{email}", 400),
+        (avatar_file and not is_valid_avatar_file(avatar_file), "【更新用户资料失败】头像文件类型或大小不合规", 400),
+        (phone and not is_valid_phone(phone), f"【更新用户资料失败】无效的手机号格式：{phone}", 400),
         (User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first(),
-         f"【更新用户资料失败】用户 {username}/{email} 已存在"),
+         f"【更新用户资料失败】用户 {username}/{email} 已存在", 400),
     ]
-    for condition, message in validation_checks:
+    for condition, message, code in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.error(message)
-            return jsonify({'operation': new_operation.to_dict()}), 400
+            return jsonify({'operation': new_operation.to_dict()}), code
 
     # 更新用户信息
     current_user.username = username
@@ -326,14 +326,14 @@ def change_password():
 
     # 校验字段
     validation_checks = [
-        (not current_password or not new_password, "【修改密码失败】当前密码或新密码为空"),
-        (not check_password_hash(current_user.password, current_password), "【修改密码失败】当前密码错误"),
+        (not current_password or not new_password, "【修改密码失败】当前密码或新密码为空", 400),
+        (not check_password_hash(current_user.password, current_password), "【修改密码失败】当前密码错误", 400),
     ]
-    for condition, message in validation_checks:
+    for condition, message, code in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.error(message)
-            return jsonify({'operation': new_operation.to_dict()}), 400
+            return jsonify({'operation': new_operation.to_dict()}), code
 
     # 更新密码
     current_user.password = generate_password_hash(new_password)
