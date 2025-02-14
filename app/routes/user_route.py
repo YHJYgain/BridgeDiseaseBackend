@@ -165,7 +165,7 @@ def logout():
         device_info=request.user_agent.string,
     )
 
-    # 获取当前用户的身份（使用 access token）
+    # 获取当前用户身份（使用 access token）
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
 
@@ -197,7 +197,7 @@ def refresh():
         device_info=request.user_agent.string,
     )
 
-    # 获取当前用户的身份（使用 refresh token）
+    # 获取当前用户身份（使用 refresh token）
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
 
@@ -228,7 +228,7 @@ def profile():
         device_info=request.user_agent.string,
     )
 
-    # 获取当前用户的身份（使用 access token）
+    # 获取当前用户身份（使用 access token）
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
 
@@ -264,7 +264,7 @@ def update():
         device_info=request.user_agent.string,
     )
 
-    # 获取当前用户的身份（使用 access token）
+    # 获取当前用户身份（使用 access token）
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
 
@@ -320,7 +320,7 @@ def change_password():
         device_info=request.user_agent.string,
     )
 
-    # 获取当前用户的身份（使用 access token）
+    # 获取当前用户身份（使用 access token）
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
 
@@ -364,7 +364,7 @@ def delete():
         device_info=request.user_agent.string,
     )
 
-    # 获取当前用户的身份（使用 access token）
+    # 获取当前用户身份（使用 access token）
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
 

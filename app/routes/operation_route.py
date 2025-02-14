@@ -27,10 +27,10 @@ def current_user_operations():
         device_info=request.user_agent.string,
     )
 
-    # 获取当前用户的身份（使用 access token）
+    # 获取当前用户身份（使用 access token）
     current_user_id = get_jwt_identity()
 
-    # 获取当前用户的操作日志
+    # 获取当前用户操作日志
     query = Operation.query.filter_by(owner_id=current_user_id)
     page, operations_total, pages = adjust_page_if_needed(query, page, per_page)
     operations = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -68,7 +68,7 @@ def user_operations(user_id):
         device_info=request.user_agent.string,
     )
 
-    # 获取当前用户的身份（使用 access token）
+    # 获取当前用户身份（使用 access token）
     current_user_id = get_jwt_identity()
 
     # 验证指定用户
@@ -79,7 +79,7 @@ def user_operations(user_id):
         current_app.logger.error(failure_message)
         return jsonify({'operation': new_operation.to_dict()}), 404
 
-    # 获取指定用户的操作日志
+    # 获取指定用户操作日志
     query = Operation.query.filter_by(owner_id=user_id)
     page, operations_total, pages = adjust_page_if_needed(query, page, per_page)
     operations = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -88,7 +88,7 @@ def user_operations(user_id):
     new_operation = handle_operation_success(new_operation, start_time, user_id)
 
     current_app.logger.info(
-        f"【获取当前用户操作记录成功】total: {operations_total}, per_page: {per_page}, page: {page}, pages: {pages}, operations: {[operation.to_dict() for operation in operations]}")
+        f"【获取用户 ID={user_id} 操作记录成功】total: {operations_total}, per_page: {per_page}, page: {page}, pages: {pages}, operations: {[operation.to_dict() for operation in operations]}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'operations': [operation.to_dict() for operation in operations],
