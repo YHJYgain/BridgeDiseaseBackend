@@ -37,8 +37,8 @@ def user_operations(user_id):
     # 校验字段
     validation_checks = [
         (not user, f"【获取用户 ID={user_id} 操作记录失败】该用户不存在", 404),
-        (current_user_id != user_id and current_user.role != UserRole.ADMIN,
-         f"【获取用户 ID={user_id} 操作记录失败】当前登录用户非管理员，权限不足", 403),
+        (current_user_id != user_id and current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
+         f"【获取用户 ID={user_id} 操作记录失败】当前登录用户非管理员/开发人员，权限不足", 403),
     ]
     for condition, message, code in validation_checks:
         if condition:
