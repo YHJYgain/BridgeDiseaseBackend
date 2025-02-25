@@ -55,7 +55,8 @@ class Media(db.Model):
                 f"file_type={self.file_type}, "
                 f"resolution_width={self.resolution_width}, "
                 f"resolution_height={self.resolution_height}, "
-                f"upload_time={self.upload_time}, "
+                f"upload_at={self.upload_at}, "
+                f"updated_at={self.updated_at}, "
                 f"owner_id={self.owner_id})")
 
     def to_dict(self):
@@ -71,6 +72,7 @@ class Media(db.Model):
             'file_type': self.file_type,
             'resolution_width': self.resolution_width,
             'resolution_height': self.resolution_height,
-            'upload_time': self.upload_time,
+            'upload_at': self.upload_at,
+            'updated_at': self.updated_at,
             'owner_id': self.owner_id
         }

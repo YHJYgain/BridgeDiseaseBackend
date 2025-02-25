@@ -234,3 +234,55 @@ def update(media_id):
         'operation': new_operation.to_dict(),
         'updated_media': updated_media.to_dict(),
     }), 200
+
+@media_routes.route('/delete/<int:media_id>', methods=['DELETE'])
+@jwt_required()
+@login_required
+def delete(media_id):
+    start_time = time.time()  # 记录操作开始时间
+
+    # 创建一个新的操作记录
+    new_operation = Operation(
+        operation_type=OperationType.DELETE,
+        description=f"删除媒体文件 ID={media_id}",
+        ip_address=request.remote_addr,
+        device_info=request.user_agent.string,
+    )
+
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+
+    # 获取指定媒体文件
+    media = Media.query.get(media_id)
+
+    # 校验字段
+    validation_checks = [
+        (not media, f"【删除媒体文件 ID={media_id} 失败】该媒体文件不存在", 404),
+        (
+            media and media.owner_id != current_user_id and current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
+            f"【删除媒体文件 ID={media_id} 失败】当前登录用户非管理员/开发人员，权限不足", 403),
+    ]
+    for condition, message, code in validation_checks:
+        if condition:
+            new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
+            current_app.logger.error(message)
+            return jsonify({'operation': new_operation.to_dict()}), code
+
+    # 删除实际文件
+    file_path = os.path.join(current_app.root_path, media.file_path)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    # 删除数据库记录
+    db.session.delete(media)
+    db.session.commit()
+
+    # 记录操作
+    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
+
+    current_app.logger.info(f"【删除媒体文件成功】deleted_media: {media.to_dict()}")
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'deleted_media': media.to_dict(),
+    }), 200
