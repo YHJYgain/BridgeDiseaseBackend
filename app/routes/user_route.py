@@ -36,8 +36,8 @@ def register():
         device_info=request.user_agent.string,
     )
 
-    # 根据用户名或邮箱查找用户
-    user = User.query.filter((User.username == username) | (User.email == email)).first()
+    # 根据用户名、邮箱、手机号查找用户（因为这三个字段具有唯一性）
+    user = User.query.filter((User.username == username) | (User.email == email) | (User.phone == phone)).first()
 
     # 校验字段
     validation_checks = [
@@ -274,7 +274,8 @@ def update():
         (not is_valid_email(email), f"【更新用户资料失败】无效的邮箱格式：{email}", 400),
         (avatar_file and not is_valid_avatar_file(avatar_file), "【更新用户资料失败】头像文件类型或大小不合规", 400),
         (phone and not is_valid_phone(phone), f"【更新用户资料失败】无效的手机号格式：{phone}", 400),
-        (User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first(),
+        (phone and (User.query.filter_by(username=username).first() or User.query.filter_by(
+            email=email).first() or User.query.filter_by(phone=phone).first()),
          f"【更新用户资料失败】用户 {username}/{email} 已存在", 400),
     ]
     for condition, message, code in validation_checks:
