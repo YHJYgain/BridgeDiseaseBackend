@@ -3,6 +3,7 @@ from datetime import datetime
 from logging.config import dictConfig
 
 from flask import Flask
+from flask_cors import CORS
 
 from .config import Config
 from .errors import *
@@ -19,6 +20,9 @@ def create_app():
     :rtype: Flask
     """
     app = Flask(__name__, instance_relative_config=True)
+
+    # 启用 CORS 支持
+    CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
 
     # 配置日志记录
     configure_logging()
