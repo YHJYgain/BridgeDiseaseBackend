@@ -35,8 +35,8 @@ class Model(db.Model):
         updated_at (datetime): 模型记录的最后更新时间，自动更新。
 
     Relationships:
-        owner (User): 一个模型只属于一个用户（反向关系），表示该模型的所有者。
-        detections (Detection): 一个模型可以有多个检测分割记录（一个对多关系），表示该模型应用于的检测任务。
+        owner (User): 一个模型只属于一个用户，表示该模型的所有者。
+        detections (Detection): 一个模型可以有多个检测分割记录（反向关系，表示该模型应用于的检测任务）。
     """
     __tablename__ = 'model'  # 表名
 

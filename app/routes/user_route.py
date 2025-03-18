@@ -119,6 +119,7 @@ def login():
     validation_checks = [
         (not username_or_email or not password, "【登录失败】用户名或邮箱和密码是必填项", 400),
         (not user, f"【登录失败】该用户 {username_or_email} 尚未注册，请先注册", 400),
+        (user and user.status == UserStatus.BANNED, f"【登录失败】该用户 {username_or_email} 已被封禁", 403),
         (user and (user.status == UserStatus.DELETED or user.deleted_at),
          f"【登录失败】该用户 {username_or_email} 已注销", 400),
         (user and not check_password_hash(user.password, password), "【登录失败】密码错误", 400),

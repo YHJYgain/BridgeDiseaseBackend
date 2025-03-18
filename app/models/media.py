@@ -26,7 +26,7 @@ class Media(db.Model):
 
     Relationships:
         owner (User): 一个媒体文件只属于一个用户（反向关系），表示该文件的所有者。
-        detections (Detection): 一个媒体文件可以有多个检测分割记录（一个对多关系），表示该文件参与的所有检测任务。
+        detections (Detection): 一个媒体文件可以有多个检测分割记录（反向关系，表示该文件参与的所有检测任务）。
     """
     __tablename__ = 'media'
 
