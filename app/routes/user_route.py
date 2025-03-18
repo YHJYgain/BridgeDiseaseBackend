@@ -275,7 +275,8 @@ def update():
         (not is_valid_email(email), f"【更新用户资料失败】无效的邮箱格式：{email}", 400),
         (avatar_file and not is_valid_avatar_file(avatar_file), "【更新用户资料失败】头像文件类型或大小不合规", 400),
         (phone and not is_valid_phone(phone), f"【更新用户资料失败】无效的手机号格式：{phone}", 400),
-        (phone and (User.query.filter_by(username=username).first() or User.query.filter_by(
+        (phone and (current_user.username != username or current_user.email != email or current_user.phone != phone)
+         and (User.query.filter_by(username=username).first() or User.query.filter_by(
             email=email).first() or User.query.filter_by(phone=phone).first()),
          f"【更新用户资料失败】用户 {username}/{email} 已存在", 400),
     ]
