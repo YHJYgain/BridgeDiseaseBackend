@@ -113,8 +113,10 @@ def user_medias(user_id):
     # 校验字段
     validation_checks = [
         (not user, f"【获取用户 ID={user_id} 媒体文件失败】该用户不存在", 404),
-        (current_user_id != user_id and current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
-         f"【获取用户 ID={user_id} 操作记录失败】当前登录用户非管理员/开发人员，权限不足", 403),
+        (
+            current_user_id != user_id and (
+                    current_user.role != UserRole.ADMIN or current_user.role != UserRole.DEVELOPER),
+            f"【获取用户 ID={user_id} 操作记录失败】当前登录用户非管理员/开发人员，权限不足", 403),
     ]
     for condition, message, code in validation_checks:
         if condition:
@@ -166,9 +168,9 @@ def media_detail(media_id):
     # 校验字段
     validation_checks = [
         (not media, f"【获取媒体文件 ID={media_id} 详情失败】该媒体文件不存在", 404),
-        (
-            media and media.owner_id != current_user_id and current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
-            f"【获取媒体文件 ID={media_id} 详情失败】当前登录用户非管理员/开发人员，权限不足", 403),
+        (media and media.owner_id != current_user_id and (
+                current_user.role != UserRole.ADMIN or current_user.role != UserRole.DEVELOPER),
+         f"【获取媒体文件 ID={media_id} 详情失败】当前登录用户非管理员/开发人员，权限不足", 403),
     ]
     for condition, message, code in validation_checks:
         if condition:
@@ -213,9 +215,9 @@ def update(media_id):
     # 校验字段
     validation_checks = [
         (not updated_media, f"【更新媒体文件 ID={media_id} 信息失败】该媒体文件不存在", 404),
-        (
-            updated_media and updated_media.owner_id != current_user_id and current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
-            f"【更新媒体文件 ID={media_id} 信息失败】当前登录用户非管理员/开发人员，权限不足", 403),
+        (updated_media and updated_media.owner_id != current_user_id and (
+                current_user.role != UserRole.ADMIN or current_user.role != UserRole.DEVELOPER),
+         f"【更新媒体文件 ID={media_id} 信息失败】当前登录用户非管理员/开发人员，权限不足", 403),
     ]
     for condition, message, code in validation_checks:
         if condition:
@@ -234,6 +236,7 @@ def update(media_id):
         'operation': new_operation.to_dict(),
         'updated_media': updated_media.to_dict(),
     }), 200
+
 
 @media_routes.route('/delete/<int:media_id>', methods=['DELETE'])
 @jwt_required()
@@ -259,9 +262,9 @@ def delete(media_id):
     # 校验字段
     validation_checks = [
         (not media, f"【删除媒体文件 ID={media_id} 失败】该媒体文件不存在", 404),
-        (
-            media and media.owner_id != current_user_id and current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
-            f"【删除媒体文件 ID={media_id} 失败】当前登录用户非管理员/开发人员，权限不足", 403),
+        (media and media.owner_id != current_user_id and (
+                    current_user.role != UserRole.ADMIN or current_user.role != UserRole.DEVELOPER),
+         f"【删除媒体文件 ID={media_id} 失败】当前登录用户非管理员/开发人员，权限不足", 403),
     ]
     for condition, message, code in validation_checks:
         if condition:
