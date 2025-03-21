@@ -353,6 +353,38 @@ def change_password():
     }), 200
 
 
+@user_routes.route('/statistics', methods=['GET'])
+@jwt_required()
+@login_required
+def get_user_statistics():
+    start_time = time.time()  # 记录操作开始时间
+
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+
+    # 查询用户总数（不包括软删除的用户）
+    total_users = User.query.filter(User.status != UserStatus.DELETED).count()
+
+    # 查询不同角色的用户数量（不包括软删除的用户）
+    admin_users = User.query.filter(User.role == UserRole.ADMIN, User.status != UserStatus.DELETED).count()
+    developer_users = User.query.filter(User.role == UserRole.DEVELOPER, User.status != UserStatus.DELETED).count()
+    normal_users = User.query.filter(User.role == UserRole.USER, User.status != UserStatus.DELETED).count()
+
+    # 构建统计数据
+    users_statistics = {
+        'total': total_users,
+        'admin': admin_users,
+        'developer': developer_users,
+        'user': normal_users
+    }
+
+    current_app.logger.info(f"【获取用户统计数据成功】current_user: {current_user.username}")
+    return jsonify({
+        "users_statistics": users_statistics,
+    }), 200
+
+
 @user_routes.route('/delete', methods=['DELETE'])
 @jwt_required()
 @login_required

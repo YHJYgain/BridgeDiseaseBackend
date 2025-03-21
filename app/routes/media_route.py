@@ -199,7 +199,7 @@ def update(media_id):
 
     # 创建一个新的操作记录
     new_operation = Operation(
-        operation_type=OperationType.READ,
+        operation_type=OperationType.UPDATE,
         description=f"更新媒体文件 ID={media_id} 信息",
         ip_address=request.remote_addr,
         device_info=request.user_agent.string,
