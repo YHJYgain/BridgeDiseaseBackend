@@ -357,8 +357,6 @@ def change_password():
 @jwt_required()
 @login_required
 def get_user_statistics():
-    start_time = time.time()  # 记录操作开始时间
-
     # 获取当前用户身份（使用 access token）
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
@@ -379,7 +377,6 @@ def get_user_statistics():
         'user': normal_users
     }
 
-    current_app.logger.info(f"【获取用户统计数据成功】current_user: {current_user.username}")
     return jsonify({
         "users_statistics": users_statistics,
     }), 200

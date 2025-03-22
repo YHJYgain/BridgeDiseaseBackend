@@ -52,8 +52,7 @@ def upload():
     # 校验字段
     validation_checks = [
         (model_file and not is_valid_file_type(model_file), "【上传模型失败】模型文件不合规", 400),
-        (current_user.role != UserRole.ADMIN or current_user.role != UserRole.DEVELOPER,
-         f"【上传模型失败】当前登录用户非管理员/开发人员，权限不足", 403),
+        (current_user.role != UserRole.DEVELOPER, f"【上传模型失败】当前登录用户开发人员，权限不足", 403),
     ]
     for condition, message, code in validation_checks:
         if condition:
