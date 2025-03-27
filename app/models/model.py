@@ -45,9 +45,9 @@ class Model(db.Model):
     model_path = db.Column(db.String(255), unique=True, nullable=False)  # 存储路径
     augmentation = db.Column(db.String(255))  # 数据增强方式
     disease_category = db.Column(db.String(100), nullable=False)  # 病害类别
-    layers = db.Column(db.Integer)  # 层数
-    parameters = db.Column(db.Integer)  # 参数量
-    GFLOPs = db.Column(db.Float)  # 计算量
+    layers = db.Column(db.Integer, nullable=False)  # 层数
+    parameters = db.Column(db.Integer, nullable=False)  # 参数量
+    GFLOPs = db.Column(db.Float, nullable=False)  # 计算量
     box_p = db.Column(db.Float)  # 目标检测框的精度
     box_r = db.Column(db.Float)  # 目标检测框的召回率
     box_mAP50 = db.Column(db.Float)  # 目标检测框在 IoU=0.5 时的 mAP

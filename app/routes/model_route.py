@@ -23,9 +23,9 @@ def upload():
     model_file = request.files.get('model_file')
     augmentation = request.form.get('augmentation', '原图')
     disease_category = request.form.get('disease_category')
-    layers = int(request.form.get('layers', 0))
-    parameters = int(request.form.get('parameters', 0))
-    GFLOPs = float(request.form.get('GFLOPs', 0.0))
+    layers = int(request.form.get('layers'))
+    parameters = int(request.form.get('parameters'))
+    GFLOPs = float(request.form.get('GFLOPs'))
     box_p = float(request.form.get('box_p', 0.0))
     box_r = float(request.form.get('box_r', 0.0))
     box_mAP50 = float(request.form.get('box_mAP50', 0.0))
@@ -52,7 +52,9 @@ def upload():
     # 校验字段
     validation_checks = [
         (model_file and not is_valid_file_type(model_file), "【上传模型失败】模型文件不合规", 400),
-        (current_user.role != UserRole.DEVELOPER, f"【上传模型失败】当前登录用户开发人员，权限不足", 403),
+        (current_user.role != UserRole.DEVELOPER, f"【上传模型失败】当前登录用户非开发人员，权限不足", 403),
+        (not disease_category or not layers or not parameters or not GFLOPs,
+         "【上传模型失败】模型病害类别、层数、参数量或计算量为空", 400),
     ]
     for condition, message, code in validation_checks:
         if condition:
@@ -65,9 +67,6 @@ def upload():
 
     # 保存文件到指定目录（返回相对路径）
     file_path = handle_file_upload(model_file, 'models')
-
-    # 获取文件绝对路径
-    absolute_path = os.path.join(current_app.root_path, file_path)
 
     new_model = Model(
         file_name=file_name,
@@ -100,6 +99,40 @@ def upload():
         'operation': new_operation.to_dict(),
         'new_model': new_model.to_dict(),
     }), 201
+
+
+@model_routes.route('/models/all', methods=['GET'])
+@jwt_required()
+@login_required
+def all_models():
+    # 获取分页参数（从请求中获取，默认为第 1 页，每页 5 条记录）
+    default_page = request.args.get('page', 1, type=int)
+    default_per_page = request.args.get('per_page', 5, type=int)
+    page, per_page = get_pagination_params(default_page, default_per_page)
+
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+
+    if current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER:
+        failure_message = f"【获取所有模型失败】当前登录用户非管理员/开发人员，权限不足"
+        current_app.logger.error(failure_message)
+        return jsonify({'failure_message': failure_message}), 403
+
+    # 获取所有模型文件
+    query = Model.query
+    page, models_total, pages = adjust_page_if_needed(query, page, per_page)
+    models = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    current_app.logger.info(
+        f"【获取所有模型成功】total: {models_total}, per_page: {per_page}, page: {page}, pages: {pages}, models: {[model.to_dict() for model in models]}")
+    return jsonify({
+        'models': [model.to_dict() for model in models],
+        'total': models_total,
+        'per_page': per_page,
+        'page': page,
+        'pages': pages,
+    }), 200
 
 # @model_routes.route('/models/<int:user_id>', methods=['GET'])
 # @jwt_required()
