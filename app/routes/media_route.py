@@ -60,7 +60,7 @@ def upload():
         with Image.open(absolute_path) as img:
             resolution_width, resolution_height = img.size
     elif file_type in {'mp4', 'avi', 'mov'}:  # 视频
-        with VideoFileClip(file_path) as video:
+        with VideoFileClip(absolute_path) as video:
             resolution_width, resolution_height = video.size
 
     new_media = Media(
