@@ -291,7 +291,8 @@ def update():
     current_user.email = email
     current_user.first_name = first_name
     current_user.last_name = last_name
-    current_user.avatar_path = handle_file_upload(avatar_file, 'avatars')
+    if avatar_file:  # 如果有头像文件，则上传并更新头像路径；如果没有，则说明用户不需要更新头像
+        current_user.avatar_path = handle_file_upload(avatar_file, 'avatars')
     current_user.phone = phone
     db.session.commit()
 

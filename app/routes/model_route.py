@@ -69,8 +69,8 @@ def upload():
     file_path = handle_file_upload(model_file, 'models')
 
     new_model = Model(
-        file_name=file_name,
-        file_path=file_path,
+        model_name=file_name,
+        model_path=file_path,
         augmentation=augmentation,
         disease_category=disease_category,
         layers=layers,
