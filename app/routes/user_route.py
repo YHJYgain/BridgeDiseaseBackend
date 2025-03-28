@@ -358,10 +358,6 @@ def change_password():
 @jwt_required()
 @login_required
 def get_user_statistics():
-    # 获取当前用户身份（使用 access token）
-    current_user_id = get_jwt_identity()
-    current_user = User.query.get(current_user_id)
-
     # 查询用户总数（不包括软删除的用户）
     total_users = User.query.filter(User.status != UserStatus.DELETED).count()
 
