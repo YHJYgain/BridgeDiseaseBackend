@@ -10,7 +10,7 @@ from app.routes import detection_routes
 @detection_routes.route('/statistics', methods=['GET'])
 @jwt_required()
 @login_required
-def get_detection_statistics():
+def statistics():
     # 查询检测记录总数
     total_detections = Detection.query.count()
 

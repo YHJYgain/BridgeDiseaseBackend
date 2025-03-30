@@ -357,7 +357,7 @@ def change_password():
 @user_routes.route('/statistics', methods=['GET'])
 @jwt_required()
 @login_required
-def get_user_statistics():
+def statistics():
     # 查询用户总数（不包括软删除的用户）
     total_users = User.query.filter(User.status != UserStatus.DELETED).count()
 

@@ -257,6 +257,31 @@ def update(media_id):
     }), 200
 
 
+@media_routes.route('/statistics', methods=['GET'])
+@jwt_required()
+@login_required
+def statistics():
+    # 查询媒体总数
+    total_medias = Media.query.count()
+
+    # 图片类型（png, jpg, jpeg）
+    image_count = Media.query.filter(Media.file_type.in_(['png', 'jpg', 'jpeg'])).count()
+
+    # 视频类型（mp4, avi, mov）
+    video_count = Media.query.filter(Media.file_type.in_(['mp4', 'avi', 'mov'])).count()
+
+    # 构建返回数据
+    medias_statistics = {
+        'total': total_medias,
+        'image': image_count,
+        'video': video_count
+    }
+
+    return jsonify({
+        "medias_statistics": medias_statistics,
+    }), 200
+
+
 @media_routes.route('/delete/<int:media_id>', methods=['DELETE'])
 @jwt_required()
 @login_required

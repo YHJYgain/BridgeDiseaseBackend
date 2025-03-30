@@ -134,6 +134,7 @@ def all_models():
         'pages': pages,
     }), 200
 
+
 # @model_routes.route('/models/<int:user_id>', methods=['GET'])
 # @jwt_required()
 # @login_required
@@ -291,6 +292,21 @@ def all_models():
 #         'updated_model': updated_model.to_dict(),
 #     }), 200
 
+@model_routes.route('/statistics', methods=['GET'])
+@jwt_required()
+@login_required
+def statistics():
+    # 查询模型总数
+    total_models = Model.query.count()
+
+    # 构建统计数据
+    models_statistics = {
+        'total': total_models
+    }
+
+    return jsonify({
+        "models_statistics": models_statistics,
+    }), 200
 
 # @model_routes.route('/delete/<int:model_id>', methods=['DELETE'])
 # @jwt_required()
