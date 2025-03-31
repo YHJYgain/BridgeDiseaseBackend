@@ -34,8 +34,8 @@ def upload():
     mask_r = float(request.form.get('mask_r', 0.0))
     mask_mAP50 = float(request.form.get('mask_mAP50', 0.0))
     mask_mAP50_95 = float(request.form.get('mask_mAP50_95', 0.0))
-    fitness_score = float(request.form.get('fitness_score', 0.0))
     f1_score = float(request.form.get('f1_score', 0.0))
+    fitness_score = float(request.form.get('fitness_score', 0.0))
 
     # 创建一个新的操作记录
     new_operation = Operation(
@@ -88,8 +88,8 @@ def upload():
         mask_r=mask_r,
         mask_mAP50=mask_mAP50,
         mask_mAP50_95=mask_mAP50_95,
-        fitness_score=fitness_score,
         f1_score=f1_score,
+        fitness_score=fitness_score,
         owner_id=current_user_id,
     )
     db.session.add(new_model)

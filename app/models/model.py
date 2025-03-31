@@ -29,8 +29,8 @@ class Model(db.Model):
         mask_r (float): 分割掩膜的召回率。
         mask_mAP50 (float): 分割掩膜在 IoU=0.5 时的 mAP。
         mask_mAP50_95 (float): 分割掩膜在 IoU 从 0.5 到 0.95 的 mAP。
-        fitness_score (float): 模型的适应度分数，用于评估模型的整体性能。
         f1_score (float): 模型的 F1 分数，综合精度和召回率的性能指标。
+        fitness_score (float): 模型的适应度分数，用于评估模型的整体性能。
         created_at (datetime): 模型记录的创建时间，自动生成。
         updated_at (datetime): 模型记录的最后更新时间，自动更新。
 
@@ -56,8 +56,8 @@ class Model(db.Model):
     mask_r = db.Column(db.Float)  # 分割掩膜的召回率
     mask_mAP50 = db.Column(db.Float)  # 分割掩膜在 IoU=0.5 时的 mAP
     mask_mAP50_95 = db.Column(db.Float)  # 分割掩膜在 IoU 从 0.5 到 0.95 的 mAP
-    fitness_score = db.Column(db.Float)  # 适应度分数
     f1_score = db.Column(db.Float)  # F1 分数
+    fitness_score = db.Column(db.Float)  # 适应度分数
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 创建时间
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")),
                            onupdate=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 最后更新时间
@@ -83,8 +83,8 @@ class Model(db.Model):
                 f"mask_r={self.mask_r}, "
                 f"mask_mAP50={self.mask_mAP50}, "
                 f"mask_mAP50_95={self.mask_mAP50_95}, "
-                f"fitness_score={self.fitness_score}, "
                 f"f1_score={self.f1_score}, "
+                f"fitness_score={self.fitness_score}, "
                 f"created_at={self.created_at}, "
                 f"updated_at={self.updated_at}, "
                 f"owner_id={self.owner_id})")
@@ -110,8 +110,8 @@ class Model(db.Model):
             'mask_r': self.mask_r,
             'mask_mAP50': self.mask_mAP50,
             'mask_mAP50_95': self.mask_mAP50_95,
-            'fitness_score': self.fitness_score,
             'f1_score': self.f1_score,
+            'fitness_score': self.fitness_score,
             'created_at': self.created_at,
             'updated_at': self.updated_at,
             'owner_id': self.owner_id
