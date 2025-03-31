@@ -49,10 +49,17 @@ def upload():
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
 
+    # 先获取文件名
+    file_name = secure_filename(model_file.filename) if model_file else None
+
+    # 检查文件名是否已存在
+    existing_model = Model.query.filter_by(model_name=file_name).first() if file_name else None
+
     # 校验字段
     validation_checks = [
         (model_file and not is_valid_file_type(model_file), "【上传模型失败】模型文件不合规", 400),
         (current_user.role != UserRole.DEVELOPER, f"【上传模型失败】当前登录用户非开发人员，权限不足", 403),
+        (model_file and existing_model, f"【上传模型失败】模型 {file_name} 已存在，请重新上传", 400),
         (not disease_category or not layers or not parameters or not GFLOPs,
          "【上传模型失败】模型病害类别、层数、参数量或计算量为空", 400),
     ]
@@ -61,9 +68,6 @@ def upload():
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.error(message)
             return jsonify({'operation': new_operation.to_dict()}), code
-
-    # 获取文件名并进行安全处理
-    file_name = secure_filename(model_file.filename)
 
     # 保存文件到指定目录（返回相对路径）
     file_path = handle_file_upload(model_file, 'models')
@@ -119,8 +123,8 @@ def all_models():
         current_app.logger.error(failure_message)
         return jsonify({'failure_message': failure_message}), 403
 
-    # 获取所有模型文件
-    query = Model.query
+    # 获取所有模型文件，按照fitness_score降序排序
+    query = Model.query.order_by(Model.fitness_score.desc())
     page, models_total, pages = adjust_page_if_needed(query, page, per_page)
     models = query.paginate(page=page, per_page=per_page, error_out=False)
 

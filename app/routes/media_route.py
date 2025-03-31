@@ -36,14 +36,22 @@ def upload():
     # 获取当前用户身份（使用 access token）
     current_user_id = get_jwt_identity()
 
-    if media_file and not is_valid_file_type(media_file):
-        failure_message = "【上传媒体失败】媒体文件不合规"
-        new_operation = handle_operation_failure(new_operation, start_time, failure_message, current_user_id)
-        current_app.logger.error(failure_message)
-        return jsonify({'operation': new_operation.to_dict()}), 400
+    # 先获取文件名
+    file_name = secure_filename(media_file.filename) if media_file else None
 
-    # 获取文件名并进行安全处理
-    file_name = secure_filename(media_file.filename)
+    # 检查文件名是否已存在
+    existing_media = Media.query.filter_by(media_name=file_name).first() if file_name else None
+
+    # 校验字段
+    validation_checks = [
+        (media_file and not is_valid_file_type(media_file), "【上传媒体失败】媒体文件不合规", 400),
+        (media_file and existing_media, f"【上传媒体失败】媒体 {file_name} 已存在，请重新上传", 400),
+    ]
+    for condition, message, code in validation_checks:
+        if condition:
+            new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
+            current_app.logger.error(message)
+            return jsonify({'operation': new_operation.to_dict()}), code
 
     # 保存文件到指定目录（返回相对路径）
     file_path = handle_file_upload(media_file, 'medias')
@@ -64,8 +72,8 @@ def upload():
             resolution_width, resolution_height = video.size
 
     new_media = Media(
-        file_name=file_name,
-        file_path=file_path,
+        media_name=file_name,
+        media_path=file_path,
         description=description,
         file_size=os.path.getsize(absolute_path) / 1024,  # 转换为 KB
         file_type=file_type,

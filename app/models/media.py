@@ -13,8 +13,8 @@ class Media(db.Model):
 
     Attributes:
         media_id (int): 媒体文件的唯一标识符（主键）。
-        file_name (str): 媒体文件的文件名，不能为空。
-        file_path (str): 媒体文件的存储路径，不能为空。
+        media_name (str): 媒体名称，必须唯一，不能为空。
+        media_path (str): 媒体存储路径，必须唯一，不能为空。
         description (str): 媒体文件的描述信息（可选）。
         file_size (int): 媒体文件的大小（字节）。
         file_type (str): 媒体文件的类型，通常为图片或视频。
@@ -31,8 +31,8 @@ class Media(db.Model):
     __tablename__ = 'media'
 
     media_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 媒体 ID
-    file_name = db.Column(db.String(255), nullable=False)  # 文件名
-    file_path = db.Column(db.String(255), nullable=False)  # 文件路径
+    media_name = db.Column(db.String(255), unique=True, nullable=False)  # 文件名
+    media_path = db.Column(db.String(255), unique=True, nullable=False)  # 文件路径
     description = db.Column(db.Text, default='暂无描述')  # 媒体描述
     file_size = db.Column(db.Integer)  # 文件大小（KB）
     file_type = db.Column(db.String(50), nullable=False)  # 文件类型（图片或视频）
@@ -48,8 +48,8 @@ class Media(db.Model):
 
     def __repr__(self):
         return (f"Media(media_id={self.media_id}, "
-                f"file_name={self.file_name}, "
-                f"file_path={self.file_path}, "
+                f"file_name={self.media_name}, "
+                f"file_path={self.media_path}, "
                 f"description={self.description}, "
                 f"file_size={self.file_size}, "
                 f"file_type={self.file_type}, "
@@ -65,8 +65,8 @@ class Media(db.Model):
         """
         return {
             'media_id': self.media_id,
-            'file_name': self.file_name,
-            'file_path': self.file_path,
+            'file_name': self.media_name,
+            'file_path': self.media_path,
             'description': self.description,
             'file_size': self.file_size,
             'file_type': self.file_type,
