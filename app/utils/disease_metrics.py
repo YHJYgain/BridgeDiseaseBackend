@@ -165,7 +165,6 @@ def evaluate_disease_severity(disease_count, disease_perimeter, disease_area, sh
 
     # 计算加权总分
     weighted_score = sum(normalized_values[key] * weights[key] for key in weights)
-    current_app.logger.info(f'病害评分：{weighted_score}')
 
     # 根据得分确定病害等级和描述
     if weighted_score >= 0.8:

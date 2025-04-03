@@ -7,18 +7,17 @@ from zoneinfo import ZoneInfo
 
 import cv2
 import numpy as np
-import torch
 from flask import jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ultralytics import YOLO
 
-from app.constants import TaskStatus, OperationType
+from app.constants import TaskStatus, OperationType, UserRole
 from app.decorators import login_required
 from app.models import Detection, Media, Model, Operation, User, db
 from app.routes import detection_routes
 from app.utils import handle_operation_success, handle_operation_failure, compute_count, compute_perimeter, \
     compute_area, compute_shape_complexity, compute_texture_roughness, compute_crack_width, compute_avg_hue, \
-    convert_detection_results, evaluate_disease_severity
+    convert_detection_results, evaluate_disease_severity, get_pagination_params, adjust_page_if_needed
 
 
 @detection_routes.route('/detection_segmentation', methods=['POST'])
@@ -60,7 +59,7 @@ def detection_segmentation():
             current_app.logger.error(message)
             return jsonify({'operation': new_operation.to_dict()}), code
 
-    # 创建检测记录
+    # 创建新的检测分割记录
     new_detection = Detection(
         detection_at=datetime.now(ZoneInfo("Asia/Shanghai")),
         owner_id=current_user_id,
@@ -126,12 +125,10 @@ def detection_segmentation():
         disease_area = compute_area(combined_masks)  # 病害面积（像素）
         shape_complexity = compute_shape_complexity(disease_perimeter, disease_area)  # 形状复杂度
         texture_roughness = compute_texture_roughness(combined_masks)  # 纹理粗糙度
-        crack_width = compute_crack_width(combined_masks) if torch.isin(cls, torch.tensor([3, 4],
-                                                                                          device=cls.device)).any() else 0.0  # 裂缝宽度
-        avg_hue = compute_avg_hue(combined_masks, image) if torch.isin(cls, torch.tensor([0],
-                                                                                         device=cls.device)).any() else 0.0  # 平均色调
+        crack_width = compute_crack_width(combined_masks) if "裂缝" in model.disease_category else 0.0  # 裂缝宽度
+        avg_hue = compute_avg_hue(combined_masks, image) if "锈蚀" in model.disease_category else 0.0  # 平均色调
 
-        # 根据检测结果确定病害等级、病害描述
+        # 根据检测结果计算病害严重性得分、病害等级、病害描述
         disease_severity_score, disease_grade, disease_description = evaluate_disease_severity(disease_count,
                                                                                                disease_perimeter,
                                                                                                disease_area,
@@ -140,7 +137,7 @@ def detection_segmentation():
                                                                                                crack_width,
                                                                                                avg_hue, media)
 
-        # 更新检测记录
+        # 更新检测信息
         new_detection.status = TaskStatus.COMPLETED
         new_detection.raw_detection_result = detection_json_str
         new_detection.raw_segmentation_result = segmentation_json_str
@@ -190,6 +187,83 @@ def detection_segmentation():
                                  f"Request URL: {request_url}\n"
                                  f"Request Data: {request_data}")
         return jsonify({'operation': new_operation.to_dict()}), 500
+
+
+@detection_routes.route('/detections/<int:user_id>', methods=['GET'])
+@jwt_required()
+@login_required
+def user_detections(user_id):
+    # 获取分页参数（从请求中获取，默认为第 1 页，每页 5 条记录）
+    default_page = request.args.get('page', 1, type=int)
+    default_per_page = request.args.get('per_page', 5, type=int)
+    page, per_page = get_pagination_params(default_page, default_per_page)
+
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+
+    # 获取指定用户身份
+    user = User.query.get(user_id)
+
+    # 校验字段
+    validation_checks = [
+        (not user, f"【获取用户 ID={user_id} 检测分割记录失败】该用户不存在", 404),
+        (current_user_id != user_id and current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
+         f"【获取用户 ID={user_id} 检测分割记录失败】当前登录用户非管理员/开发人员，权限不足", 403),
+    ]
+    for condition, message, code in validation_checks:
+        if condition:
+            current_app.logger.error(message)
+            return jsonify({'failure_message': message}), code
+
+    # 获取指定用户检测分割记录
+    query = Detection.query.filter_by(owner_id=user_id)
+    page, detections_total, pages = adjust_page_if_needed(query, page, per_page)
+    detections = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    current_app.logger.info(
+        f"【获取用户 ID={user_id} 检测分割记录成功】total: {detections_total}, per_page: {per_page}, page: {page}, pages: {pages}, detections: {[detection.to_dict() for detection in detections]}")
+    return jsonify({
+        'detections': [detection.to_dict() for detection in detections],
+        'total': detections_total,
+        'per_page': per_page,
+        'page': page,
+        'pages': pages,
+    }), 200
+
+
+@detection_routes.route('/detections/all', methods=['GET'])
+@jwt_required()
+@login_required
+def all_detections():
+    # 获取分页参数（从请求中获取，默认为第 1 页，每页 5 条记录）
+    default_page = request.args.get('page', 1, type=int)
+    default_per_page = request.args.get('per_page', 5, type=int)
+    page, per_page = get_pagination_params(default_page, default_per_page)
+
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+
+    if current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER:
+        failure_message = f"【获取所有检测分割记录失败】当前登录用户非管理员/开发人员，权限不足"
+        current_app.logger.error(failure_message)
+        return jsonify({'failure_message': failure_message}), 403
+
+    # 获取所有媒体
+    query = Detection.query
+    page, detections_total, pages = adjust_page_if_needed(query, page, per_page)
+    detections = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    current_app.logger.info(
+        f"【获取所有检测分割记录成功】total: {detections_total}, per_page: {per_page}, page: {page}, pages: {pages}, detections: {[detection.to_dict() for detection in detections]}")
+    return jsonify({
+        'detections': [detection.to_dict() for detection in detections],
+        'total': detections_total,
+        'per_page': per_page,
+        'page': page,
+        'pages': pages,
+    }), 200
 
 
 @detection_routes.route('/statistics', methods=['GET'])

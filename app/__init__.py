@@ -22,7 +22,7 @@ def create_app():
     app = Flask(__name__, instance_relative_config=True)
 
     # 启用 CORS 支持
-    CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
+    CORS(app)
 
     # 配置日志记录
     configure_logging()

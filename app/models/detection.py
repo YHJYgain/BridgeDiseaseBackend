@@ -54,7 +54,7 @@ class Detection(db.Model):
     texture_roughness = db.Column(db.Float, default=0.0)  # 纹理粗糙度
     crack_width = db.Column(db.Float, default=0.0)  # 裂缝宽度（适用裂缝等）
     avg_hue = db.Column(db.Float, default=0.0)  # 平均色调（适用锈蚀等）
-    disease_severity_score = db.Column(db.Float, default=0.0)  # 病害严重性得分
+    disease_severity_score = db.Column(db.Float, default=0.0, nullable=False)  # 病害严重性得分
     disease_grade = db.Column(db.Enum(DiseaseGrade), default=DiseaseGrade.MILD, nullable=False)  # 病害评估等级
     disease_description = db.Column(db.Text, default='暂无描述')  # 病害评估描述
     status = db.Column(db.Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False)  # 任务状态
