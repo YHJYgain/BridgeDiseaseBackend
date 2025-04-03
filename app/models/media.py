@@ -48,8 +48,8 @@ class Media(db.Model):
 
     def __repr__(self):
         return (f"Media(media_id={self.media_id}, "
-                f"file_name={self.media_name}, "
-                f"file_path={self.media_path}, "
+                f"media_name={self.media_name}, "
+                f"media_path={self.media_path}, "
                 f"description={self.description}, "
                 f"file_size={self.file_size}, "
                 f"file_type={self.file_type}, "
@@ -65,8 +65,8 @@ class Media(db.Model):
         """
         return {
             'media_id': self.media_id,
-            'file_name': self.media_name,
-            'file_path': self.media_path,
+            'media_name': self.media_name,
+            'media_path': self.media_path,
             'description': self.description,
             'file_size': self.file_size,
             'file_type': self.file_type,

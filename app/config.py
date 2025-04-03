@@ -8,8 +8,9 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False  # 禁用 SQLAlchemy 的修改追踪
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'mp4', 'avi', 'mov', 'pt', 'engine'}  # 允许上传的文件扩展名
     AVATARS_FOLDER = os.path.join(os.getcwd(), 'app', 'static', 'avatars')  # 头像存储的文件夹路径
+    MODELS_FOLDER = os.path.join(os.getcwd(), 'app', 'static', 'models')  # 模型存储的文件夹路径
     MEDIAS_FOLDER = os.path.join(os.getcwd(), 'app', 'static', 'medias')  # 媒体存储的文件夹路径
-    MODELS_FOLDER = os.path.join(os.getcwd(), 'app','static','models')  # 模型存储的文件夹路径
+    RESULTS_FOLDER = os.path.join(os.getcwd(), 'app', 'static','results')  # 结果存储的文件夹路径
     MAX_AVATAR_SIZE = 5 * 1024 * 1024  # 最大头像文件大小：5MB
     JWT_SECRET_KEY = 'WZY'  # 为 JWT 设置一个密钥
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)  # access token 过期时间

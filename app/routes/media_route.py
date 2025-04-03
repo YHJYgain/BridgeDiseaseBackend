@@ -195,8 +195,8 @@ def media_detail(media_id):
     # 校验字段
     validation_checks = [
         (not media, f"【获取媒体 ID={media_id} 详情失败】该媒体不存在", 404),
-        (media and media.owner_id != current_user_id and (
-                current_user.role != UserRole.ADMIN or current_user.role != UserRole.DEVELOPER),
+        (media and media.owner_id != current_user_id and current_user.role != UserRole.ADMIN
+         and current_user.role != UserRole.DEVELOPER,
          f"【获取媒体 ID={media_id} 详情失败】当前登录用户非管理员/开发人员，权限不足", 403),
     ]
     for condition, message, code in validation_checks:
@@ -242,8 +242,8 @@ def update(media_id):
     # 校验字段
     validation_checks = [
         (not updated_media, f"【更新媒体 ID={media_id} 信息失败】该媒体不存在", 404),
-        (updated_media and updated_media.owner_id != current_user_id and (
-                current_user.role != UserRole.ADMIN or current_user.role != UserRole.DEVELOPER),
+        (updated_media and updated_media.owner_id != current_user_id and current_user.role != UserRole.ADMIN
+         and current_user.role != UserRole.DEVELOPER,
          f"【更新媒体 ID={media_id} 信息失败】当前登录用户非管理员/开发人员，权限不足", 403),
     ]
     for condition, message, code in validation_checks:
@@ -314,8 +314,8 @@ def delete(media_id):
     # 校验字段
     validation_checks = [
         (not media, f"【删除媒体 ID={media_id} 失败】该媒体不存在", 404),
-        (media and media.owner_id != current_user_id and (
-                current_user.role != UserRole.ADMIN or current_user.role != UserRole.DEVELOPER),
+        (media and media.owner_id != current_user_id and current_user.role != UserRole.ADMIN
+         and current_user.role != UserRole.DEVELOPER,
          f"【删除媒体 ID={media_id} 失败】当前登录用户非管理员/开发人员，权限不足", 403),
     ]
     for condition, message, code in validation_checks:

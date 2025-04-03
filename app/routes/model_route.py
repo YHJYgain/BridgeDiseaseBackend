@@ -118,13 +118,8 @@ def all_models():
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
 
-    if current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER:
-        failure_message = f"【获取所有模型失败】当前登录用户非管理员/开发人员，权限不足"
-        current_app.logger.error(failure_message)
-        return jsonify({'failure_message': failure_message}), 403
-
-    # 获取所有模型文件，按照fitness_score降序排序
-    query = Model.query.order_by(Model.fitness_score.desc())
+    # 获取所有模型文件，先按照 disease_category 升序排序，再按照 fitness_score 降序排序
+    query = Model.query.order_by(Model.disease_category.asc(), Model.fitness_score.desc())
     page, models_total, pages = adjust_page_if_needed(query, page, per_page)
     models = query.paginate(page=page, per_page=per_page, error_out=False)
 

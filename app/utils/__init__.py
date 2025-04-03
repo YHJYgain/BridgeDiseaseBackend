@@ -1,3 +1,4 @@
+from .disease_metrics import *
 from .field_check import *
 from .file_util import *
 from .jwt import *

@@ -45,19 +45,19 @@ class Model(db.Model):
     model_path = db.Column(db.String(255), unique=True, nullable=False)  # 存储路径
     augmentation = db.Column(db.String(255))  # 数据增强方式
     disease_category = db.Column(db.String(100), nullable=False)  # 病害类别
-    layers = db.Column(db.Integer, nullable=False)  # 层数
-    parameters = db.Column(db.Integer, nullable=False)  # 参数量
-    GFLOPs = db.Column(db.Float, nullable=False)  # 计算量
-    box_p = db.Column(db.Float)  # 目标检测框的精度
-    box_r = db.Column(db.Float)  # 目标检测框的召回率
-    box_mAP50 = db.Column(db.Float)  # 目标检测框在 IoU=0.5 时的 mAP
-    box_mAP50_95 = db.Column(db.Float)  # 目标检测框在 IoU 从 0.5 到 0.95 的 mAP
-    mask_p = db.Column(db.Float)  # 分割掩膜的精度
-    mask_r = db.Column(db.Float)  # 分割掩膜的召回率
-    mask_mAP50 = db.Column(db.Float)  # 分割掩膜在 IoU=0.5 时的 mAP
-    mask_mAP50_95 = db.Column(db.Float)  # 分割掩膜在 IoU 从 0.5 到 0.95 的 mAP
-    f1_score = db.Column(db.Float)  # F1 分数
-    fitness_score = db.Column(db.Float)  # 适应度分数
+    layers = db.Column(db.Integer, nullable=False, default=0)  # 层数
+    parameters = db.Column(db.Integer, nullable=False, default=0)  # 参数量
+    GFLOPs = db.Column(db.Float, nullable=False, default=lambda: round(0.0, 1))  # 计算量
+    box_p = db.Column(db.Float, default=lambda: round(0.0, 3))  # 目标检测框的精度
+    box_r = db.Column(db.Float, default=lambda: round(0.0, 3))  # 目标检测框的召回率
+    box_mAP50 = db.Column(db.Float, default=lambda: round(0.0, 3))  # 目标检测框在 IoU=0.5 时的 mAP
+    box_mAP50_95 = db.Column(db.Float, default=lambda: round(0.0, 3))  # 目标检测框在 IoU 从 0.5 到 0.95 的 mAP
+    mask_p = db.Column(db.Float, default=lambda: round(0.0, 3))  # 分割掩膜的精度
+    mask_r = db.Column(db.Float, default=lambda: round(0.0, 3))  # 分割掩膜的召回率
+    mask_mAP50 = db.Column(db.Float, default=lambda: round(0.0, 3))  # 分割掩膜在 IoU=0.5 时的 mAP
+    mask_mAP50_95 = db.Column(db.Float, default=lambda: round(0.0, 3))  # 分割掩膜在 IoU 从 0.5 到 0.95 的 mAP
+    f1_score = db.Column(db.Float, default=lambda: round(0.0, 5))  # F1 分数
+    fitness_score = db.Column(db.Float, default=lambda: round(0.0, 5))  # 适应度分数
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 创建时间
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")),
                            onupdate=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 最后更新时间
