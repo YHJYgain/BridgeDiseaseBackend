@@ -25,6 +25,7 @@ class Detection(db.Model):
         texture_roughness (float): 病害的纹理粗糙度。
         crack_width (float): 裂缝的宽度（适用于裂缝病害）。
         avg_hue (float): 病害的平均色调（适用于锈蚀等病害）。
+        disease_severity_score (float): 病害严重性得分。
         disease_grade (str): 病害的评估等级，使用枚举类型（'mild', 'moderate', 'severe', 'critical'）。
         disease_description (str): 病害评估的描述信息。
         status (str): 任务状态，使用枚举类型（'pending', 'in_progress', 'completed', 'failed'）。
@@ -47,12 +48,13 @@ class Detection(db.Model):
     result_image_path = db.Column(db.String(255))  # 检测分割结果图路径
     cropped_image_path = db.Column(db.String(255))  # 裁剪结果图路径
     disease_count = db.Column(db.Integer, default=0)  # 病害数量
-    disease_perimeter = db.Column(db.Float, default=lambda: round(0.0, 5))  # 病害周长
-    disease_area = db.Column(db.Float, default=lambda: round(0.0, 5))  # 病害面积
-    shape_complexity = db.Column(db.Float, default=lambda: round(0.0, 5))  # 形状复杂度
-    texture_roughness = db.Column(db.Float, default=lambda: round(0.0, 5))  # 纹理粗糙度
-    crack_width = db.Column(db.Float, default=lambda: round(0.0, 5))  # 裂缝宽度（适用裂缝等）
-    avg_hue = db.Column(db.Float, default=lambda: round(0.0, 5))  # 平均色调（适用锈蚀等）
+    disease_perimeter = db.Column(db.Float, default=0.0)  # 病害周长
+    disease_area = db.Column(db.Float, default=0.0)  # 病害面积
+    shape_complexity = db.Column(db.Float, default=0.0)  # 形状复杂度
+    texture_roughness = db.Column(db.Float, default=0.0)  # 纹理粗糙度
+    crack_width = db.Column(db.Float, default=0.0)  # 裂缝宽度（适用裂缝等）
+    avg_hue = db.Column(db.Float, default=0.0)  # 平均色调（适用锈蚀等）
+    disease_severity_score = db.Column(db.Float, default=0.0)  # 病害严重性得分
     disease_grade = db.Column(db.Enum(DiseaseGrade), default=DiseaseGrade.MILD, nullable=False)  # 病害评估等级
     disease_description = db.Column(db.Text, default='暂无描述')  # 病害评估描述
     status = db.Column(db.Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False)  # 任务状态
@@ -81,6 +83,7 @@ class Detection(db.Model):
                 f"texture_roughness={self.texture_roughness}, "
                 f"crack_width={self.crack_width}, "
                 f"avg_hue={self.avg_hue}, "
+                f"disease_severity_score={self.disease_severity_score}, "
                 f"disease_grade={self.disease_grade.name}, "
                 f"disease_description={self.disease_description}, "
                 f"status={self.status.name}, "
@@ -105,6 +108,7 @@ class Detection(db.Model):
             'texture_roughness': self.texture_roughness,
             'crack_width': self.crack_width,
             'avg_hue': self.avg_hue,
+            'disease_severity_score': self.disease_severity_score,
             'disease_grade': self.disease_grade.name,
             'disease_description': self.disease_description,
             'status': self.status.name,

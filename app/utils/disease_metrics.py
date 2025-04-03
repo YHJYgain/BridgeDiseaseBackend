@@ -33,7 +33,6 @@ def convert_detection_results(result):
             segmentation_item = {
                 "name": item.get("name"),
                 "class": item.get("class"),
-                "confidence": item.get("confidence"),
                 "segments": item.get("segments")
             }
             detection_list.append(detection_item)
@@ -170,10 +169,10 @@ def evaluate_disease_severity(disease_count, disease_perimeter, disease_area, sh
 
     # 根据得分确定病害等级和描述
     if weighted_score >= 0.8:
-        return DiseaseGrade.CRITICAL.value, '病害情况严重，需要立即采取修复措施。'
+        return weighted_score, DiseaseGrade.CRITICAL.value, '病害情况严重，需要立即采取修复措施。'
     elif weighted_score >= 0.5:
-        return DiseaseGrade.SEVERE.value, '病害情况重度，应尽快安排修复。'
+        return weighted_score, DiseaseGrade.SEVERE.value, '病害情况重度，应尽快安排修复。'
     elif weighted_score >= 0.2:
-        return DiseaseGrade.MODERATE.value, '病害情况中等，应安排维护。'
+        return weighted_score, DiseaseGrade.MODERATE.value, '病害情况中等，应安排维护。'
     else:
-        return DiseaseGrade.MILD.value, '病害情况轻微，定期观察即可。'
+        return weighted_score, DiseaseGrade.MILD.value, '病害情况轻微，定期观察即可。'

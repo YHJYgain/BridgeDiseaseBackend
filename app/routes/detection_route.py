@@ -132,9 +132,13 @@ def detection_segmentation():
                                                                                          device=cls.device)).any() else 0.0  # 平均色调
 
         # 根据检测结果确定病害等级、病害描述
-        disease_grade, disease_description = evaluate_disease_severity(disease_count, disease_perimeter, disease_area,
-                                                                       shape_complexity, texture_roughness, crack_width,
-                                                                       avg_hue, media)
+        disease_severity_score, disease_grade, disease_description = evaluate_disease_severity(disease_count,
+                                                                                               disease_perimeter,
+                                                                                               disease_area,
+                                                                                               shape_complexity,
+                                                                                               texture_roughness,
+                                                                                               crack_width,
+                                                                                               avg_hue, media)
 
         # 更新检测记录
         new_detection.status = TaskStatus.COMPLETED
@@ -149,6 +153,7 @@ def detection_segmentation():
         new_detection.texture_roughness = texture_roughness
         new_detection.crack_width = crack_width
         new_detection.avg_hue = avg_hue
+        new_detection.disease_severity_score = disease_severity_score
         new_detection.disease_grade = disease_grade
         new_detection.disease_description = disease_description
         db.session.commit()
