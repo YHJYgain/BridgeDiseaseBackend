@@ -66,7 +66,7 @@ def upload():
     for condition, message, code in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
-            current_app.logger.error(message)
+            current_app.logger.error(message + f', operator: {current_user}')
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 保存文件到指定目录（返回相对路径）
@@ -98,40 +98,11 @@ def upload():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【上传模型成功】new_model: {new_model}")
+    current_app.logger.info(f"【上传模型成功】new_model: {new_model}, operator: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'new_model': new_model.to_dict(),
     }), 201
-
-
-@model_routes.route('/models/all', methods=['GET'])
-@jwt_required()
-@login_required
-def all_models():
-    # 获取分页参数（从请求中获取，默认为第 1 页，每页 5 条记录）
-    default_page = request.args.get('page', 1, type=int)
-    default_per_page = request.args.get('per_page', 5, type=int)
-    page, per_page = get_pagination_params(default_page, default_per_page)
-
-    # 获取当前用户身份（使用 access token）
-    current_user_id = get_jwt_identity()
-    current_user = User.query.get(current_user_id)
-
-    # 获取所有模型文件，先按照 disease_category 升序排序，再按照 fitness_score 降序排序
-    query = Model.query.order_by(Model.disease_category.asc(), Model.fitness_score.desc())
-    page, models_total, pages = adjust_page_if_needed(query, page, per_page)
-    models = query.paginate(page=page, per_page=per_page, error_out=False)
-
-    current_app.logger.info(
-        f"【获取所有模型成功】total: {models_total}, per_page: {per_page}, page: {page}, pages: {pages}, models: {[model.to_dict() for model in models]}")
-    return jsonify({
-        'models': [model.to_dict() for model in models],
-        'total': models_total,
-        'per_page': per_page,
-        'page': page,
-        'pages': pages,
-    }), 200
 
 
 # @model_routes.route('/models/<int:user_id>', methods=['GET'])
@@ -190,48 +161,32 @@ def all_models():
 #     }), 200
 
 
-# @model_routes.route('/detail/<int:model_id>', methods=['GET'])
-# @jwt_required()
-# @login_required
-# def model_detail(model_id):
-#     start_time = time.time()  # 记录操作开始时间
+@model_routes.route('/detail/<int:model_id>', methods=['GET'])
+@jwt_required()
+@login_required
+def model_detail(model_id):
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
 
-#     # 创建一个新的操作记录
-#     new_operation = Operation(
-#         operation_type=OperationType.READ,
-#         description=f"获取模型文件 ID={model_id} 详情",
-#         ip_address=request.remote_addr,
-#         device_info=request.user_agent.string,
-#     )
+    # 获取指定模型文件
+    model = Model.query.get(model_id)
 
-#     # 获取当前用户身份（使用 access token）
-#     current_user_id = get_jwt_identity()
-#     current_user = User.query.get(current_user_id)
+    # 校验字段
+    validation_checks = [
+        (not model, f"【获取模型 ID={model_id} 详情失败】该模型不存在", 404),
+        (model and model.owner_id != current_user_id and current_user.role != UserRole.ADMIN
+         and current_user.role != UserRole.DEVELOPER,
+         f"【获取模型 ID={model_id} 详情失败】当前登录用户非管理员/开发人员，权限不足", 403),
+    ]
+    for condition, message, code in validation_checks:
+        if condition:
+            current_app.logger.error(message + f', operator: {current_user}')
+            return jsonify({'failure_message': message}), code
 
-#     # 获取指定模型文件
-#     model = Model.query.get(model_id)
-
-#     # 校验字段
-#     validation_checks = [
-#         (not model, f"【获取模型文件 ID={model_id} 详情失败】该模型文件不存在", 404),
-#         (
-#             model and model.owner_id != current_user_id and current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
-#             f"【获取模型文件 ID={model_id} 详情失败】当前登录用户非管理员/开发人员，权限不足", 403),
-#     ]
-#     for condition, message, code in validation_checks:
-#         if condition:
-#             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
-#             current_app.logger.error(message)
-#             return jsonify({'operation': new_operation.to_dict()}), code
-
-#     # 记录操作
-#     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
-
-#     current_app.logger.info(f"【获取模型文件 ID={model_id} 详情成功】model: {model.to_dict()}")
-#     return jsonify({
-#         'operation': new_operation.to_dict(),
-#         'model': model.to_dict(),
-#     }), 200
+    return jsonify({
+        'model': model.to_dict(),
+    }), 200
 
 
 # @model_routes.route('/update/<int:model_id>', methods=['PUT'])
@@ -291,21 +246,6 @@ def all_models():
 #         'updated_model': updated_model.to_dict(),
 #     }), 200
 
-@model_routes.route('/statistics', methods=['GET'])
-@jwt_required()
-@login_required
-def statistics():
-    # 查询模型总数
-    total_models = Model.query.count()
-
-    # 构建统计数据
-    models_statistics = {
-        'total': total_models
-    }
-
-    return jsonify({
-        "models_statistics": models_statistics,
-    }), 200
 
 # @model_routes.route('/delete/<int:model_id>', methods=['DELETE'])
 # @jwt_required()
@@ -358,3 +298,48 @@ def statistics():
 #         'operation': new_operation.to_dict(),
 #         'deleted_model': model.to_dict(),
 #     }), 200
+
+@model_routes.route('/models/all', methods=['GET'])
+@jwt_required()
+@login_required
+def all_models():
+    # 获取分页参数（从请求中获取，默认为第 1 页，每页 5 条记录）
+    default_page = request.args.get('page', 1, type=int)
+    default_per_page = request.args.get('per_page', 5, type=int)
+    page, per_page = get_pagination_params(default_page, default_per_page)
+
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+
+    # 获取所有模型文件，先按照 disease_category 升序排序，再按照 fitness_score 降序排序
+    query = Model.query.order_by(Model.disease_category.asc(), Model.fitness_score.desc())
+    page, models_total, pages = adjust_page_if_needed(query, page, per_page)
+    models = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    current_app.logger.info(
+        f"【获取所有模型成功】total: {models_total}, per_page: {per_page}, page: {page}, pages: {pages}, models: {[model.to_dict() for model in models]}, operator: {current_user}")
+    return jsonify({
+        'models': [model.to_dict() for model in models],
+        'total': models_total,
+        'per_page': per_page,
+        'page': page,
+        'pages': pages,
+    }), 200
+
+
+@model_routes.route('/statistics', methods=['GET'])
+@jwt_required()
+@login_required
+def statistics():
+    # 查询模型总数
+    total_models = Model.query.count()
+
+    # 构建统计数据
+    models_statistics = {
+        'total': total_models
+    }
+
+    return jsonify({
+        "models_statistics": models_statistics,
+    }), 200

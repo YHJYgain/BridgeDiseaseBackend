@@ -2,7 +2,6 @@ import json
 
 import cv2
 import numpy as np
-from flask import current_app
 from skimage.morphology import skeletonize
 
 from app.constants import DiseaseGrade

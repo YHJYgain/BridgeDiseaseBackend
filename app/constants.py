@@ -44,7 +44,7 @@ class TaskStatus(Enum):
     PENDING = 'pending'  # 待处理
     IN_PROGRESS = 'in_progress'  # 检测中
     COMPLETED = 'completed'  # 已完成
-    FAILED = 'failed'  # 检测失败
+    FAILED = 'failed'  # 失败
 
     @classmethod
     def list(cls):

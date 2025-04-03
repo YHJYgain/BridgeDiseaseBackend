@@ -35,6 +35,7 @@ def upload():
 
     # 获取当前用户身份（使用 access token）
     current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
 
     # 先获取文件名
     file_name = secure_filename(media_file.filename) if media_file else None
@@ -50,7 +51,7 @@ def upload():
     for condition, message, code in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
-            current_app.logger.error(message)
+            current_app.logger.error(message + f', operator: {current_user}')
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 保存文件到指定目录（返回相对路径）
@@ -87,104 +88,17 @@ def upload():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【上传媒体成功】new_media: {new_media}")
+    current_app.logger.info(f"【上传媒体成功】new_media: {new_media}, operator: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'new_media': new_media.to_dict(),
     }), 201
 
 
-@media_routes.route('/medias/<int:user_id>', methods=['GET'])
-@jwt_required()
-@login_required
-def user_medias(user_id):
-    # 获取分页参数（从请求中获取，默认为第 1 页，每页 5 条记录）
-    default_page = request.args.get('page', 1, type=int)
-    default_per_page = request.args.get('per_page', 5, type=int)
-    page, per_page = get_pagination_params(default_page, default_per_page)
-
-    # 获取当前用户身份（使用 access token）
-    current_user_id = get_jwt_identity()
-    current_user = User.query.get(current_user_id)
-
-    # 获取指定用户身份
-    user = User.query.get(user_id)
-
-    # 校验字段
-    validation_checks = [
-        (not user, f"【获取用户 ID={user_id} 媒体失败】该用户不存在", 404),
-        (current_user_id != user_id and current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
-         f"【获取用户 ID={user_id} 操作记录失败】当前登录用户非管理员/开发人员，权限不足", 403),
-    ]
-    for condition, message, code in validation_checks:
-        if condition:
-            current_app.logger.error(message)
-            return jsonify({'failure_message': message}), code
-
-    # 获取指定用户媒体
-    query = Media.query.filter_by(owner_id=user_id)
-    page, medias_total, pages = adjust_page_if_needed(query, page, per_page)
-    medias = query.paginate(page=page, per_page=per_page, error_out=False)
-
-    current_app.logger.info(
-        f"【获取用户 ID={user_id} 媒体成功】total: {medias_total}, per_page: {per_page}, page: {page}, pages: {pages}, medias: {[media.to_dict() for media in medias]}")
-    return jsonify({
-        'medias': [media.to_dict() for media in medias],
-        'total': medias_total,
-        'per_page': per_page,
-        'page': page,
-        'pages': pages,
-    }), 200
-
-
-@media_routes.route('/medias/all', methods=['GET'])
-@jwt_required()
-@login_required
-def all_medias():
-    # 获取分页参数（从请求中获取，默认为第 1 页，每页 5 条记录）
-    default_page = request.args.get('page', 1, type=int)
-    default_per_page = request.args.get('per_page', 5, type=int)
-    page, per_page = get_pagination_params(default_page, default_per_page)
-
-    # 获取当前用户身份（使用 access token）
-    current_user_id = get_jwt_identity()
-    current_user = User.query.get(current_user_id)
-
-    if current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER:
-        failure_message = f"【获取所有媒体失败】当前登录用户非管理员/开发人员，权限不足"
-        current_app.logger.error(failure_message)
-        return jsonify({'failure_message': failure_message}), 403
-
-    # 获取所有媒体
-    query = Media.query
-    page, medias_total, pages = adjust_page_if_needed(query, page, per_page)
-    medias = query.paginate(page=page, per_page=per_page, error_out=False)
-
-    current_app.logger.info(
-        f"【获取所有媒体成功】total: {medias_total}, per_page: {per_page}, page: {page}, pages: {pages}, medias: {[media.to_dict() for media in medias]}")
-    return jsonify({
-        'medias': [media.to_dict() for media in medias],
-        'total': medias_total,
-        'per_page': per_page,
-        'page': page,
-        'pages': pages,
-    }), 200
-
-
 @media_routes.route('/detail/<int:media_id>', methods=['GET'])
 @jwt_required()
 @login_required
-def media_detail(media_id):
-    start_time = time.time()  # 记录操作开始时间
-
-    # 创建一个新的操作记录
-    new_operation = Operation(
-        operation_type=OperationType.READ,
-        description=f"获取媒体 ID={media_id} 详情",
-        ip_address=request.remote_addr,
-        device_info=request.user_agent.string,
-    )
-
+def detail(media_id):
     # 获取当前用户身份（使用 access token）
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
@@ -201,16 +115,10 @@ def media_detail(media_id):
     ]
     for condition, message, code in validation_checks:
         if condition:
-            new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
-            current_app.logger.error(message)
-            return jsonify({'operation': new_operation.to_dict()}), code
+            current_app.logger.error(message + f', operator: {current_user}')
+            return jsonify({'failure_message': message}), code
 
-    # 记录操作
-    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
-
-    current_app.logger.info(f"【获取媒体 ID={media_id} 详情成功】media: {media.to_dict()}")
     return jsonify({
-        'operation': new_operation.to_dict(),
         'media': media.to_dict(),
     }), 200
 
@@ -249,7 +157,7 @@ def update(media_id):
     for condition, message, code in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
-            current_app.logger.error(message)
+            current_app.logger.error(message + f', operator: {current_user}')
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 更新媒体信息
@@ -258,35 +166,12 @@ def update(media_id):
 
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
-    current_app.logger.info(f"【更新媒体 ID={media_id} 信息成功】updated_media: {updated_media.to_dict()}")
+
+    current_app.logger.info(
+        f"【更新媒体 ID={media_id} 信息成功】updated_media: {updated_media.to_dict()}, operator: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'updated_media': updated_media.to_dict(),
-    }), 200
-
-
-@media_routes.route('/statistics', methods=['GET'])
-@jwt_required()
-@login_required
-def statistics():
-    # 查询媒体总数
-    total_medias = Media.query.count()
-
-    # 图片类型（png, jpg, jpeg）
-    image_count = Media.query.filter(Media.file_type.in_(['png', 'jpg', 'jpeg'])).count()
-
-    # 视频类型（mp4, avi, mov）
-    video_count = Media.query.filter(Media.file_type.in_(['mp4', 'avi', 'mov'])).count()
-
-    # 构建返回数据
-    medias_statistics = {
-        'total': total_medias,
-        'image': image_count,
-        'video': video_count
-    }
-
-    return jsonify({
-        "medias_statistics": medias_statistics,
     }), 200
 
 
@@ -321,7 +206,7 @@ def delete(media_id):
     for condition, message, code in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
-            current_app.logger.error(message)
+            current_app.logger.error(message + f', operator: {current_user}')
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 删除实际文件
@@ -336,8 +221,110 @@ def delete(media_id):
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【删除媒体成功】deleted_media: {media.to_dict()}")
+    current_app.logger.info(f"【删除媒体成功】deleted_media: {media.to_dict()}, operator: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'deleted_media': media.to_dict(),
+    }), 200
+
+
+@media_routes.route('/medias/<int:user_id>', methods=['GET'])
+@jwt_required()
+@login_required
+def user_medias(user_id):
+    # 获取分页参数（从请求中获取，默认为第 1 页，每页 5 条记录）
+    default_page = request.args.get('page', 1, type=int)
+    default_per_page = request.args.get('per_page', 5, type=int)
+    page, per_page = get_pagination_params(default_page, default_per_page)
+
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+
+    # 获取指定用户身份
+    user = User.query.get(user_id)
+
+    # 校验字段
+    validation_checks = [
+        (not user, f"【获取用户 ID={user_id} 媒体失败】该用户不存在", 404),
+        (current_user_id != user_id and current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
+         f"【获取用户 ID={user_id} 操作记录失败】当前登录用户非管理员/开发人员，权限不足", 403),
+    ]
+    for condition, message, code in validation_checks:
+        if condition:
+            current_app.logger.error(message + f', operator: {current_user}')
+            return jsonify({'failure_message': message}), code
+
+    # 获取指定用户媒体
+    query = Media.query.filter_by(owner_id=user_id)
+    page, medias_total, pages = adjust_page_if_needed(query, page, per_page)
+    medias = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    current_app.logger.info(
+        f"【获取用户 ID={user_id} 媒体成功】total: {medias_total}, per_page: {per_page}, page: {page}, pages: {pages}, medias: {[media.to_dict() for media in medias]}, operator: {current_user}")
+    return jsonify({
+        'medias': [media.to_dict() for media in medias],
+        'total': medias_total,
+        'per_page': per_page,
+        'page': page,
+        'pages': pages,
+    }), 200
+
+
+@media_routes.route('/medias/all', methods=['GET'])
+@jwt_required()
+@login_required
+def all_medias():
+    # 获取分页参数（从请求中获取，默认为第 1 页，每页 5 条记录）
+    default_page = request.args.get('page', 1, type=int)
+    default_per_page = request.args.get('per_page', 5, type=int)
+    page, per_page = get_pagination_params(default_page, default_per_page)
+
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+
+    if current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER:
+        failure_message = f"【获取所有媒体失败】当前登录用户非管理员/开发人员，权限不足"
+        current_app.logger.error(failure_message + f', operator: {current_user}')
+        return jsonify({'failure_message': failure_message}), 403
+
+    # 获取所有媒体
+    query = Media.query
+    page, medias_total, pages = adjust_page_if_needed(query, page, per_page)
+    medias = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    current_app.logger.info(
+        f"【获取所有媒体成功】total: {medias_total}, per_page: {per_page}, page: {page}, pages: {pages}, medias: {[media.to_dict() for media in medias]}, operator: {current_user}")
+    return jsonify({
+        'medias': [media.to_dict() for media in medias],
+        'total': medias_total,
+        'per_page': per_page,
+        'page': page,
+        'pages': pages,
+    }), 200
+
+
+@media_routes.route('/statistics', methods=['GET'])
+@jwt_required()
+@login_required
+def statistics():
+    # 查询媒体总数
+    total_medias = Media.query.count()
+
+    # 图片类型（png, jpg, jpeg）
+    image_count = Media.query.filter(Media.file_type.in_(['png', 'jpg', 'jpeg'])).count()
+
+    # 视频类型（mp4, avi, mov）
+    video_count = Media.query.filter(Media.file_type.in_(['mp4', 'avi', 'mov'])).count()
+
+    # 构建返回数据
+    medias_statistics = {
+        'total': total_medias,
+        'image': image_count,
+        'video': video_count
+    }
+
+    return jsonify({
+        "medias_statistics": medias_statistics,
     }), 200

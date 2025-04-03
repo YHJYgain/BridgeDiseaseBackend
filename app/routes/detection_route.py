@@ -189,6 +189,34 @@ def detection_segmentation():
         return jsonify({'operation': new_operation.to_dict()}), 500
 
 
+@detection_routes.route('/detail/<int:detection_id>', methods=['GET'])
+@jwt_required()
+@login_required
+def detail(detection_id):
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+
+    # 获取指定检测分割记录
+    detection = Detection.query.get(detection_id)
+
+    # 校验字段
+    validation_checks = [
+        (not detection, f"【获取检测分割 ID={detection_id} 详情失败】该检测分割记录不存在", 404),
+        (detection and detection.owner_id != current_user_id and current_user.role != UserRole.ADMIN
+         and current_user.role != UserRole.DEVELOPER,
+         f"【获取检测分割 ID={detection_id} 详情失败】当前登录用户非管理员/开发人员，权限不足", 403),
+    ]
+    for condition, message, code in validation_checks:
+        if condition:
+            current_app.logger.error(message + f', operator: {current_user}')
+            return jsonify({'failure_message': message}), code
+
+    return jsonify({
+        'detection': detection.to_dict(),
+    }), 200
+
+
 @detection_routes.route('/detections/<int:user_id>', methods=['GET'])
 @jwt_required()
 @login_required
@@ -222,7 +250,7 @@ def user_detections(user_id):
     detections = query.paginate(page=page, per_page=per_page, error_out=False)
 
     current_app.logger.info(
-        f"【获取用户 ID={user_id} 检测分割记录成功】total: {detections_total}, per_page: {per_page}, page: {page}, pages: {pages}, detections: {[detection.to_dict() for detection in detections]}")
+        f"【获取用户 ID={user_id} 检测分割记录成功】total: {detections_total}, per_page: {per_page}, page: {page}, pages: {pages}, detections: {[detection.to_dict() for detection in detections]}, operator: {current_user}")
     return jsonify({
         'detections': [detection.to_dict() for detection in detections],
         'total': detections_total,
@@ -256,7 +284,7 @@ def all_detections():
     detections = query.paginate(page=page, per_page=per_page, error_out=False)
 
     current_app.logger.info(
-        f"【获取所有检测分割记录成功】total: {detections_total}, per_page: {per_page}, page: {page}, pages: {pages}, detections: {[detection.to_dict() for detection in detections]}")
+        f"【获取所有检测分割记录成功】total: {detections_total}, per_page: {per_page}, page: {page}, pages: {pages}, detections: {[detection.to_dict() for detection in detections]}, operator: {current_user}")
     return jsonify({
         'detections': [detection.to_dict() for detection in detections],
         'total': detections_total,

@@ -208,7 +208,7 @@ def refresh():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【刷新 token 成功】user: {current_user.username}, access_token：{access_token}")
+    current_app.logger.info(f"【刷新 token 成功】current_user: {current_user}, access_token：{access_token}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'access_token': access_token,
@@ -219,27 +219,40 @@ def refresh():
 @jwt_required()
 @login_required
 def profile():
-    start_time = time.time()  # 记录操作开始时间
-
-    # 创建一个新的操作记录
-    new_operation = Operation(
-        operation_type=OperationType.READ,
-        description="获取用户资料",
-        ip_address=request.remote_addr,
-        device_info=request.user_agent.string,
-    )
-
     # 获取当前用户身份（使用 access token）
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
 
-    # 记录操作
-    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
-
-    current_app.logger.info(f"【获取用户资料成功】current_user: {current_user}")
     return jsonify({
-        'operation': new_operation.to_dict(),
         'current_user': current_user.to_dict(),
+    }), 200
+
+
+@user_routes.route('/detail/<int:user_id>', methods=['GET'])
+@jwt_required()
+@login_required
+def detail(user_id):
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+
+    # 获取指定用户
+    user = User.query.get(user_id)
+
+    # 校验字段
+    validation_checks = [
+        (not user, f"【获取用户 ID={user_id} 详情失败】该用户不存在", 404),
+        (user and user.user_id != current_user_id and current_user.role != UserRole.ADMIN
+         and current_user.role != UserRole.DEVELOPER,
+         f"【获取用户 ID={user_id} 详情失败】当前登录用户非管理员/开发人员，权限不足", 403),
+    ]
+    for condition, message, code in validation_checks:
+        if condition:
+            current_app.logger.error(message + f', operator: {current_user}')
+            return jsonify({'failure_message': message}), code
+
+    return jsonify({
+        'user': user.to_dict(),
     }), 200
 
 
@@ -283,7 +296,7 @@ def update():
     for condition, message, code in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
-            current_app.logger.error(message)
+            current_app.logger.error(message + f', operator: {current_user}')
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 更新用户信息
@@ -336,7 +349,7 @@ def change_password():
     for condition, message, code in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
-            current_app.logger.error(message)
+            current_app.logger.error(message + f', operator: {current_user}')
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 更新密码
@@ -351,31 +364,6 @@ def change_password():
         'operation': new_operation.to_dict(),
         'current_user': current_user.to_dict(),
         "old_password": current_password,
-    }), 200
-
-
-@user_routes.route('/statistics', methods=['GET'])
-@jwt_required()
-@login_required
-def statistics():
-    # 查询用户总数（不包括软删除的用户）
-    total_users = User.query.filter(User.status != UserStatus.DELETED).count()
-
-    # 查询不同角色的用户数量（不包括软删除的用户）
-    admin_users = User.query.filter(User.role == UserRole.ADMIN, User.status != UserStatus.DELETED).count()
-    developer_users = User.query.filter(User.role == UserRole.DEVELOPER, User.status != UserStatus.DELETED).count()
-    normal_users = User.query.filter(User.role == UserRole.USER, User.status != UserStatus.DELETED).count()
-
-    # 构建统计数据
-    users_statistics = {
-        'total': total_users,
-        'admin': admin_users,
-        'developer': developer_users,
-        'user': normal_users
-    }
-
-    return jsonify({
-        "users_statistics": users_statistics,
     }), 200
 
 
@@ -409,4 +397,29 @@ def delete():
     return jsonify({
         'operation': new_operation.to_dict(),
         'deleted_user': current_user.to_dict(),
+    }), 200
+
+
+@user_routes.route('/statistics', methods=['GET'])
+@jwt_required()
+@login_required
+def statistics():
+    # 查询用户总数（不包括软删除的用户）
+    total_users = User.query.filter(User.status != UserStatus.DELETED).count()
+
+    # 查询不同角色的用户数量（不包括软删除的用户）
+    admin_users = User.query.filter(User.role == UserRole.ADMIN, User.status != UserStatus.DELETED).count()
+    developer_users = User.query.filter(User.role == UserRole.DEVELOPER, User.status != UserStatus.DELETED).count()
+    normal_users = User.query.filter(User.role == UserRole.USER, User.status != UserStatus.DELETED).count()
+
+    # 构建统计数据
+    users_statistics = {
+        'total': total_users,
+        'admin': admin_users,
+        'developer': developer_users,
+        'user': normal_users
+    }
+
+    return jsonify({
+        "users_statistics": users_statistics,
     }), 200
