@@ -1,18 +1,16 @@
 import os
 import time
 
-from PIL import Image
 from flask import request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from moviepy import VideoFileClip
 from werkzeug.utils import secure_filename
 
 from app.constants import OperationType, UserRole
 from app.decorators import login_required
 from app.models import Operation, Media, db, User
 from app.routes import media_routes
-from app.utils import handle_operation_failure, is_valid_file_type, handle_file_upload, handle_operation_success, \
-    adjust_page_if_needed, get_pagination_params
+from app.utils import handle_operation_failure, allowed_image_file, handle_file_upload, handle_operation_success, \
+    adjust_page_if_needed, get_pagination_params, allowed_video_file, get_media_info
 
 
 @media_routes.route('/upload', methods=['POST'])
@@ -45,13 +43,14 @@ def upload():
 
     # 校验字段
     validation_checks = [
-        (media_file and not is_valid_file_type(media_file), "【上传媒体失败】媒体文件不合规", 400),
+        (media_file and not (allowed_image_file(media_file) or allowed_video_file(media_file)),
+         "【上传媒体失败】媒体文件不合规", 400),
         (media_file and existing_media, f"【上传媒体失败】媒体 {file_name} 已存在，请重新上传", 400),
     ]
     for condition, message, code in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
-            current_app.logger.error(message + f', operator: {current_user}')
+            current_app.logger.warning(message + f', operator: {current_user}')
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 保存文件到指定目录（返回相对路径）
@@ -63,23 +62,18 @@ def upload():
     # 获取文件绝对路径
     absolute_path = os.path.join(current_app.root_path, file_path)
 
-    # 获取分辨率
-    resolution_width = resolution_height = None
-    if file_type in {'png', 'jpg', 'jpeg'}:  # 图片
-        with Image.open(absolute_path) as img:
-            resolution_width, resolution_height = img.size
-    elif file_type in {'mp4', 'avi', 'mov'}:  # 视频
-        with VideoFileClip(absolute_path) as video:
-            resolution_width, resolution_height = video.size
+    # 获取媒体大小、分辨率、帧数
+    file_size, resolution_width, resolution_height, frame_count = get_media_info(absolute_path)
 
     new_media = Media(
         media_name=file_name,
         media_path=file_path,
         description=description,
-        file_size=os.path.getsize(absolute_path) / 1024,  # 转换为 KB
+        file_size=file_size,
         file_type=file_type,
         resolution_width=resolution_width,
         resolution_height=resolution_height,
+        frame_count=frame_count,
         owner_id=current_user_id,
     )
     db.session.add(new_media)
@@ -115,7 +109,7 @@ def detail(media_id):
     ]
     for condition, message, code in validation_checks:
         if condition:
-            current_app.logger.error(message + f', operator: {current_user}')
+            current_app.logger.warning(message + f', operator: {current_user}')
             return jsonify({'failure_message': message}), code
 
     return jsonify({
@@ -157,7 +151,7 @@ def update(media_id):
     for condition, message, code in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
-            current_app.logger.error(message + f', operator: {current_user}')
+            current_app.logger.warning(message + f', operator: {current_user}')
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 更新媒体信息
@@ -206,7 +200,7 @@ def delete(media_id):
     for condition, message, code in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
-            current_app.logger.error(message + f', operator: {current_user}')
+            current_app.logger.warning(message + f', operator: {current_user}')
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 删除实际文件
@@ -252,7 +246,7 @@ def user_medias(user_id):
     ]
     for condition, message, code in validation_checks:
         if condition:
-            current_app.logger.error(message + f', operator: {current_user}')
+            current_app.logger.warning(message + f', operator: {current_user}')
             return jsonify({'failure_message': message}), code
 
     # 获取指定用户媒体
@@ -286,7 +280,7 @@ def all_medias():
 
     if current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER:
         failure_message = f"【获取所有媒体失败】当前登录用户非管理员/开发人员，权限不足"
-        current_app.logger.error(failure_message + f', operator: {current_user}')
+        current_app.logger.warning(failure_message + f', operator: {current_user}')
         return jsonify({'failure_message': failure_message}), 403
 
     # 获取所有媒体
@@ -315,8 +309,8 @@ def statistics():
     # 图片类型（png, jpg, jpeg）
     image_count = Media.query.filter(Media.file_type.in_(['png', 'jpg', 'jpeg'])).count()
 
-    # 视频类型（mp4, avi, mov）
-    video_count = Media.query.filter(Media.file_type.in_(['mp4', 'avi', 'mov'])).count()
+    # 视频类型（mp4）
+    video_count = Media.query.filter(Media.file_type.in_(['mp4'])).count()
 
     # 构建返回数据
     medias_statistics = {

@@ -1,4 +1,3 @@
-import os
 import time
 
 from flask import request, jsonify, current_app
@@ -9,7 +8,7 @@ from app.constants import OperationType, UserRole
 from app.decorators import login_required
 from app.models import Operation, Model, db, User
 from app.routes import model_routes
-from app.utils import handle_operation_failure, is_valid_file_type, handle_file_upload, handle_operation_success, \
+from app.utils import handle_operation_failure, allowed_model_file, handle_file_upload, handle_operation_success, \
     adjust_page_if_needed, get_pagination_params
 
 
@@ -57,7 +56,7 @@ def upload():
 
     # 校验字段
     validation_checks = [
-        (model_file and not is_valid_file_type(model_file), "【上传模型失败】模型文件不合规", 400),
+        (model_file and not allowed_model_file(model_file), "【上传模型失败】模型文件不合规", 400),
         (current_user.role != UserRole.DEVELOPER, f"【上传模型失败】当前登录用户非开发人员，权限不足", 403),
         (model_file and existing_model, f"【上传模型失败】模型 {file_name} 已存在，请重新上传", 400),
         (not disease_category or not layers or not parameters or not GFLOPs,
@@ -66,7 +65,7 @@ def upload():
     for condition, message, code in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
-            current_app.logger.error(message + f', operator: {current_user}')
+            current_app.logger.warning(message + f', operator: {current_user}')
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 保存文件到指定目录（返回相对路径）
@@ -175,13 +174,10 @@ def model_detail(model_id):
     # 校验字段
     validation_checks = [
         (not model, f"【获取模型 ID={model_id} 详情失败】该模型不存在", 404),
-        (model and model.owner_id != current_user_id and current_user.role != UserRole.ADMIN
-         and current_user.role != UserRole.DEVELOPER,
-         f"【获取模型 ID={model_id} 详情失败】当前登录用户非管理员/开发人员，权限不足", 403),
     ]
     for condition, message, code in validation_checks:
         if condition:
-            current_app.logger.error(message + f', operator: {current_user}')
+            current_app.logger.warning(message + f', operator: {current_user}')
             return jsonify({'failure_message': message}), code
 
     return jsonify({

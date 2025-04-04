@@ -9,15 +9,12 @@ class Detection(db.Model):
     """
     检测分割记录类，表示数据库中的 'detection' 表。
 
-    每一条记录对应一次检测任务，包含检测及分割的原始结果，处理后的结果图像，
-    以及与检测任务相关的各类统计信息（如病害数量、面积、形状复杂度等）及评估描述。
+    每一条记录对应一次检测任务，包含检测分割结果图像，
+    以及与检测分割任务相关的各类统计信息（如病害数量、面积、形状复杂度等）及评估描述。
 
     Attributes:
         detection_id (int): 检测记录的唯一标识符（主键）。
-        raw_detection_result (str): 检测原始结果，以 JSON 格式存储。
-        raw_segmentation_result (str): 分割原始结果，以 JSON 格式存储。
-        result_image_path (str): 检测和分割的结果图像存储路径。
-        cropped_image_path (str): 裁剪后结果图像存储路径。
+        result_path (str): 检测和分割的结果存储路径。
         disease_count (int): 病害的数量。
         disease_perimeter (float): 病害的周长。
         disease_area (float): 病害的面积。
@@ -28,6 +25,8 @@ class Detection(db.Model):
         disease_severity_score (float): 病害严重性得分。
         disease_grade (str): 病害的评估等级，使用枚举类型（'mild', 'moderate', 'severe', 'critical'）。
         disease_description (str): 病害评估的描述信息。
+        detection_duration (float): 检测分割耗时（ms）。
+        avg_frame_detection_duration (float): 帧平均检测分割耗时（ms）。
         status (str): 任务状态，使用枚举类型（'pending', 'in_progress', 'completed', 'failed'）。
         detection_at (datetime): 检测任务执行的时间，自动生成。
         updated_at (datetime): 记录最后更新时间，自动更新。
@@ -43,10 +42,7 @@ class Detection(db.Model):
     __tablename__ = 'detection'
 
     detection_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 检测分割记录 ID
-    raw_detection_result = db.Column(db.Text)  # 检测原始结果（JSON 格式）
-    raw_segmentation_result = db.Column(db.Text)  # 分割原始结果（JSON 格式）
-    result_image_path = db.Column(db.String(255))  # 检测分割结果图路径
-    cropped_image_path = db.Column(db.String(255))  # 裁剪结果图路径
+    result_path = db.Column(db.String(255))  # 检测分割结果路径
     disease_count = db.Column(db.Integer, default=0)  # 病害数量
     disease_perimeter = db.Column(db.Float, default=0.0)  # 病害周长
     disease_area = db.Column(db.Float, default=0.0)  # 病害面积
@@ -57,6 +53,8 @@ class Detection(db.Model):
     disease_severity_score = db.Column(db.Float, default=0.0, nullable=False)  # 病害严重性得分
     disease_grade = db.Column(db.Enum(DiseaseGrade), default=DiseaseGrade.MILD, nullable=False)  # 病害评估等级
     disease_description = db.Column(db.Text, default='暂无描述')  # 病害评估描述
+    detection_duration = db.Column(db.Float, default=0.0)  # 检测分割耗时（ms）
+    avg_frame_detection_duration = db.Column(db.Float, default=0.0)  # 帧平均检测分割耗时（ms）
     status = db.Column(db.Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False)  # 任务状态
     detection_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 检测时间
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")),
@@ -74,8 +72,7 @@ class Detection(db.Model):
 
     def __repr__(self):
         return (f"Detection(detection_id={self.detection_id}, "
-                f"result_image_path={self.result_image_path}, "
-                f"cropped_image_path={self.cropped_image_path}, "
+                f"result_path={self.result_path}, "
                 f"disease_count={self.disease_count}, "
                 f"disease_perimeter={self.disease_perimeter}, "
                 f"disease_area={self.disease_area}, "
@@ -86,6 +83,8 @@ class Detection(db.Model):
                 f"disease_severity_score={self.disease_severity_score}, "
                 f"disease_grade={self.disease_grade.name}, "
                 f"disease_description={self.disease_description}, "
+                f"detection_duration={self.detection_duration}, "
+                f"avg_frame_detection_duration={self.avg_frame_detection_duration}, "
                 f"status={self.status.name}, "
                 f"detection_at={self.detection_at}, "
                 f"updated_at={self.updated_at}, "
@@ -99,8 +98,7 @@ class Detection(db.Model):
         """
         return {
             'detection_id': self.detection_id,
-            'result_image_path': self.result_image_path,
-            'cropped_image_path': self.cropped_image_path,
+            'result_path': self.result_path,
             'disease_count': self.disease_count,
             'disease_perimeter': self.disease_perimeter,
             'disease_area': self.disease_area,
@@ -111,6 +109,8 @@ class Detection(db.Model):
             'disease_severity_score': self.disease_severity_score,
             'disease_grade': self.disease_grade.name,
             'disease_description': self.disease_description,
+            'detection_duration': self.detection_duration,
+            'avg_frame_detection_duration': self.avg_frame_detection_duration,
             'status': self.status.name,
             'detection_at': self.detection_at,
             'updated_at': self.updated_at,

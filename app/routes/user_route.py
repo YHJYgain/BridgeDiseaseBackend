@@ -53,7 +53,7 @@ def register():
     for condition, message, code in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message)
-            current_app.logger.error(message)
+            current_app.logger.warning(message)
             return jsonify({'operation': new_operation.to_dict()}), code
 
     if user:
@@ -127,7 +127,7 @@ def login():
     for condition, message, code in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, user_id)
-            current_app.logger.error(message)
+            current_app.logger.warning(message)
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 更新用户的最后登录时间和状态
@@ -248,7 +248,7 @@ def detail(user_id):
     ]
     for condition, message, code in validation_checks:
         if condition:
-            current_app.logger.error(message + f', operator: {current_user}')
+            current_app.logger.warning(message + f', operator: {current_user}')
             return jsonify({'failure_message': message}), code
 
     return jsonify({
@@ -289,14 +289,14 @@ def update():
         (avatar_file and not is_valid_avatar_file(avatar_file), "【更新用户资料失败】头像文件类型或大小不合规", 400),
         (phone and not is_valid_phone(phone), f"【更新用户资料失败】无效的手机号格式：{phone}", 400),
         (phone and (current_user.username != username or current_user.email != email or current_user.phone != phone)
-         and (User.query.filter_by(username=username).first() or User.query.filter_by(
-            email=email).first() or User.query.filter_by(phone=phone).first()),
+         and (User.query.filter_by(username=username).first() and User.query.filter_by(
+            email=email).first() and User.query.filter_by(phone=phone).first()),
          f"【更新用户资料失败】用户 {username}/{email} 已存在", 400),
     ]
     for condition, message, code in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
-            current_app.logger.error(message + f', operator: {current_user}')
+            current_app.logger.warning(message + f', operator: {current_user}')
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 更新用户信息
@@ -349,7 +349,7 @@ def change_password():
     for condition, message, code in validation_checks:
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
-            current_app.logger.error(message + f', operator: {current_user}')
+            current_app.logger.warning(message + f', operator: {current_user}')
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 更新密码

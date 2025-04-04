@@ -31,8 +31,8 @@ class Operation(db.Model):
     operation_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 操作记录 ID
     operation_type = db.Column(db.Enum(OperationType), default=OperationType.READ, nullable=False)  # 操作类型
     description = db.Column(db.Text, nullable=False)  # 操作描述
-    duration = db.Column(db.Float)  # 操作耗时（s）
-    failure_message = db.Column(db.Text)  # 失败信息
+    duration = db.Column(db.Float, default=0.0, nullable=False)  # 操作耗时（s）
+    failure_message = db.Column(db.Text, default='无')  # 失败信息
     ip_address = db.Column(db.String(45), nullable=False)  # IP 地址
     device_info = db.Column(db.String(255), nullable=False)  # 设备信息
     status = db.Column(db.Enum(OperationStatus), default=OperationStatus.SUCCESS, nullable=False)  # 操作状态

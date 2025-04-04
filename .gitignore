@@ -36,3 +36,6 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# 功能结果文件
+static/

@@ -43,7 +43,7 @@ class Model(db.Model):
     model_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 模型 ID
     model_name = db.Column(db.String(255), unique=True, nullable=False)  # 模型名称
     model_path = db.Column(db.String(255), unique=True, nullable=False)  # 存储路径
-    augmentation = db.Column(db.String(255))  # 数据增强方式
+    augmentation = db.Column(db.String(255), default='原图')  # 数据增强方式
     disease_category = db.Column(db.String(100), nullable=False)  # 病害类别
     layers = db.Column(db.Integer, nullable=False, default=0)  # 层数
     parameters = db.Column(db.Integer, nullable=False, default=0)  # 参数量

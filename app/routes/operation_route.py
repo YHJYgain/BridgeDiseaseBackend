@@ -1,13 +1,11 @@
-import time
-
 from flask import request, current_app, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from app.constants import OperationType, UserRole
+from app.constants import UserRole
 from app.decorators import login_required
 from app.models import Operation, User
 from app.routes import operation_routes
-from app.utils import handle_operation_success, handle_operation_failure, adjust_page_if_needed, get_pagination_params
+from app.utils import adjust_page_if_needed, get_pagination_params
 
 
 @operation_routes.route('/detail/<int:operation_id>', methods=['GET'])
@@ -30,7 +28,7 @@ def detail(operation_id):
     ]
     for condition, message, code in validation_checks:
         if condition:
-            current_app.logger.error(message + f', operator: {current_user}')
+            current_app.logger.warning(message + f', operator: {current_user}')
             return jsonify({'failure_message': message}), code
 
     return jsonify({
@@ -61,7 +59,7 @@ def user_operations(user_id):
     ]
     for condition, message, code in validation_checks:
         if condition:
-            current_app.logger.error(message + f', operator: {current_user}')
+            current_app.logger.warning(message + f', operator: {current_user}')
             return jsonify({'failure_message': message}), code
 
     # 获取指定用户操作日志

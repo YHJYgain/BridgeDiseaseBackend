@@ -1,47 +1,9 @@
-import json
-
 import cv2
 import numpy as np
+from flask import current_app
 from skimage.morphology import skeletonize
 
 from app.constants import DiseaseGrade
-
-
-def convert_detection_results(result):
-    """
-    将检测结果转换为 JSON 字符串。
-
-    :param result: 具有 to_json() 方法的对象，返回 JSON 格式的检测结果。
-    :return: (detection_json_str, segmentation_json_str) - 检测框和分割结果的 JSON 字符串。
-    """
-    # 解析 JSON 数据
-    json_result = json.loads(result.to_json())
-
-    detection_list = []
-    segmentation_list = []
-
-    # 遍历检测结果
-    for item in json_result:
-        if isinstance(item, dict):  # 确保 item 是字典
-            detection_item = {
-                "name": item.get("name"),
-                "class": item.get("class"),
-                "confidence": item.get("confidence"),
-                "box": item.get("box")
-            }
-            segmentation_item = {
-                "name": item.get("name"),
-                "class": item.get("class"),
-                "segments": item.get("segments")
-            }
-            detection_list.append(detection_item)
-            segmentation_list.append(segmentation_item)
-
-    # 转换为 JSON 字符串
-    detection_json_str = json.dumps(detection_list, ensure_ascii=False)
-    segmentation_json_str = json.dumps(segmentation_list, ensure_ascii=False)
-
-    return detection_json_str, segmentation_json_str
 
 
 def compute_count(masks):
@@ -108,9 +70,9 @@ def min_max_normalize(value, min_value, max_value):
 
 
 def evaluate_disease_severity(disease_count, disease_perimeter, disease_area, shape_complexity, texture_roughness,
-                              crack_width, avg_hue, media, scale_factor=10):
+                              crack_width, avg_hue, media):
     """
-    根据病害的多个指标，计算病害等级（轻度、中度、重度、严重）。
+    根据病害的多个指标，计算病害严重性分数和病害等级（轻度、中度、重度、严重）。
 
     :param disease_count: 病害数量
     :param disease_perimeter: 病害周长
@@ -120,29 +82,29 @@ def evaluate_disease_severity(disease_count, disease_perimeter, disease_area, sh
     :param crack_width: 裂缝宽度
     :param avg_hue: 平均色调
     :param media: 媒体
-    :param scale_factor: 用于估算裂缝宽度的缩放因子，默认值为 10
-    :return: 病害等级（轻度、中度、重度、严重）
+    :return: 病害严重性分数和病害等级（轻度、中度、重度、严重）
     """
 
-    # 设定权重
-    weights = {
-        'disease_count': 0.15,
-        'disease_perimeter': 0.15,
-        'disease_area': 0.2,
-        'shape_complexity': 0.15,
-        'texture_roughness': 0.15,
-        'crack_width': 0.1,
-        'avg_hue': 0.1,
-    }
+    # 读取指标权重配置
+    weights = current_app.config['DISEASE_INDEX_WEIGHTS']
 
+    # 读取裂缝缩放因子配置
+    scale_factor = current_app.config['CRACK_SCALA_FACTOR']
+
+    # 动态计算各指标最大值
+    max_disease_count = (media.resolution_width * media.resolution_height * disease_count) // disease_area \
+        if disease_area else 0
+    max_disease_perimeter = float((2 * (media.resolution_width + media.resolution_height)))
+    max_disease_area = float(media.resolution_width * media.resolution_height)
+    max_crack_width = float(min(media.resolution_width, media.resolution_height) / scale_factor)
     min_max_values = {
-        'disease_count': (0.0, (media.resolution_width * media.resolution_height * disease_count) // disease_area),
-        'disease_perimeter': (0.0, float(2 * (media.resolution_width + media.resolution_height))),
-        'disease_area': (0.0, float(media.resolution_width * media.resolution_height)),
+        'disease_count': (0, max_disease_count),
+        'disease_perimeter': (0.0, max_disease_perimeter),
+        'disease_area': (0.0, max_disease_area),
         'shape_complexity': (0.0, 1.0),
         'texture_roughness': (0.0, 65025.0),
-        'crack_width': (0.0, min(media.resolution_width, media.resolution_height) / scale_factor),
-        'avg_hue': (0, 180)
+        'crack_width': (0.0, max_crack_width),
+        'avg_hue': (0.0, 180.0)
     }
 
     # 构造一个参数字典，确保所有需要的键都在其中

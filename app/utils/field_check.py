@@ -2,9 +2,33 @@ import re
 
 from flask import current_app
 
+from app import Config
 
-def is_valid_file_type(file):
-    return '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']
+# 读取文件类型配置
+ALLOWED_IMAGE_EXTENSIONS = Config.ALLOWED_IMAGE_EXTENSIONS
+ALLOWED_VIDEO_EXTENSIONS = Config.ALLOWED_VIDEO_EXTENSIONS
+ALLOWED_MODEL_EXTENSIONS = Config.ALLOWED_MODEL_EXTENSIONS
+
+
+def allowed_image_file(file):
+    """
+    检查文件是否为允许的图片类型
+    """
+    return '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
+
+
+def allowed_video_file(file):
+    """
+    检查文件是否为允许的视频类型
+    """
+    return '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ALLOWED_VIDEO_EXTENSIONS
+
+
+def allowed_model_file(file):
+    """
+    检查文件是否为允许的模型类型
+    """
+    return '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ALLOWED_MODEL_EXTENSIONS
 
 
 # 头像文件校验
@@ -19,7 +43,7 @@ def is_valid_avatar_file(avatar_file):
     max_avatar_size = current_app.config['MAX_AVATAR_SIZE'] / (1024 ** 2)  # MB
 
     # 校验文件类型
-    if not is_valid_file_type(avatar_file):
+    if not allowed_image_file(avatar_file):
         return False
 
     # 校验文件大小
