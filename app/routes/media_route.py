@@ -60,10 +60,10 @@ def upload():
     file_type = file_name.rsplit('.', 1)[1].lower()
 
     # 获取文件绝对路径
-    absolute_path = os.path.join(current_app.root_path, file_path)
+    abs_path = os.path.join(current_app.root_path, file_path)
 
     # 获取媒体大小、分辨率、帧数
-    file_size, resolution_width, resolution_height, frame_count = get_media_info(absolute_path)
+    file_size, resolution_width, resolution_height, frame_count = get_media_info(abs_path)
 
     new_media = Media(
         media_name=file_name,

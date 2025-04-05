@@ -33,27 +33,35 @@ def handle_file_upload(file, file_location):
     return file_path
 
 
-def get_media_info(file_absolute_path):
-    file_type = Path(file_absolute_path).suffix[1:].lower()
+def get_media_info(file_abs_path):
+    file_type = Path(file_abs_path).suffix[1:].lower()
 
-    file_size = os.path.getsize(file_absolute_path) / 1024  # 文件大小（KB）
+    file_size = os.path.getsize(file_abs_path) / 1024  # 文件大小（KB）
     resolution_width = resolution_height = 0  # 默认分辨率为 0
     frame_count = 1  # 默认是图片，帧数为 1
 
     if file_type in ALLOWED_IMAGE_EXTENSIONS:  # 图片
-        with Image.open(file_absolute_path) as img:
+        with Image.open(file_abs_path) as img:
             resolution_width, resolution_height = img.size
             frame_count = 1
     elif file_type in ALLOWED_VIDEO_EXTENSIONS:  # 视频
-        with VideoFileClip(file_absolute_path) as video:
+        with VideoFileClip(file_abs_path) as video:
             resolution_width, resolution_height = video.size
-        video = cv2.VideoCapture(file_absolute_path)
+        video = cv2.VideoCapture(file_abs_path)
         frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))  # 获取视频的帧数
         video.release()  # 释放视频文件
     else:
         current_app.logger.warning(f"获取媒体信息失败，不支持的文件类型：{file_type}")
 
     return file_size, resolution_width, resolution_height, frame_count
+
+
+def delete_file(file_abs_path):
+    if os.path.exists(file_abs_path):
+        os.remove(file_abs_path)
+        current_app.logger.debug(f"文件已删除：{file_abs_path}")
+    else:
+        current_app.logger.warning(f"文件不存在，无法删除：{file_abs_path}")
 
 
 def unify_result_media_format(media, current_user):

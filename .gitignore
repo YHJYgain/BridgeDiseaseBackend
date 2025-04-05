@@ -38,4 +38,4 @@ var/
 *.egg
 
 # 功能结果文件
-static/
+#static/

@@ -98,6 +98,7 @@ def detection_segmentation():
         results = yolo_model.predict(
             source=source_path,
             imgsz=1024,
+            half=True,
             retina_masks=True,
             save=True,
             project=RESULTS_FOLDER,

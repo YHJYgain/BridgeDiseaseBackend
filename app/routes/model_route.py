@@ -1,3 +1,4 @@
+import os
 import time
 
 from flask import request, jsonify, current_app
@@ -9,7 +10,7 @@ from app.decorators import login_required
 from app.models import Operation, Model, db, User
 from app.routes import model_routes
 from app.utils import handle_operation_failure, allowed_model_file, handle_file_upload, handle_operation_success, \
-    adjust_page_if_needed, get_pagination_params
+    adjust_page_if_needed, get_pagination_params, delete_file
 
 
 @model_routes.route('/upload', methods=['POST'])
@@ -208,57 +209,57 @@ def update(model_id):
     }), 200
 
 
-# @model_routes.route('/delete/<int:model_id>', methods=['DELETE'])
-# @jwt_required()
-# @login_required
-# def delete(model_id):
-#     start_time = time.time()  # 记录操作开始时间
+@model_routes.route('/delete/<int:model_id>', methods=['DELETE'])
+@jwt_required()
+@login_required
+def delete(model_id):
+    start_time = time.time()  # 记录操作开始时间
 
-#     # 创建一个新的操作记录
-#     new_operation = Operation(
-#         operation_type=OperationType.DELETE,
-#         description=f"删除模型文件 ID={model_id}",
-#         ip_address=request.remote_addr,
-#         device_info=request.user_agent.string,
-#     )
+    # 创建一个新的操作记录
+    new_operation = Operation(
+        operation_type=OperationType.DELETE,
+        description=f"删除模型 ID={model_id}",
+        ip_address=request.remote_addr,
+        device_info=request.user_agent.string,
+    )
 
-#     # 获取当前用户身份（使用 access token）
-#     current_user_id = get_jwt_identity()
-#     current_user = User.query.get(current_user_id)
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
 
-#     # 获取指定模型文件
-#     model = Model.query.get(model_id)
+    # 获取指定模型
+    model = Model.query.get(model_id)
 
-#     # 校验字段
-#     validation_checks = [
-#         (not model, f"【删除模型文件 ID={model_id} 失败】该模型文件不存在", 404),
-#         (
-#             model and model.owner_id != current_user_id and current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
-#             f"【删除模型文件 ID={model_id} 失败】当前登录用户非管理员/开发人员，权限不足", 403),
-#     ]
-#     for condition, message, code in validation_checks:
-#         if condition:
-#             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
-#             current_app.logger.error(message)
-#             return jsonify({'operation': new_operation.to_dict()}), code
+    # 校验字段
+    validation_checks = [
+        (not model, f"【删除模型 ID={model_id} 失败】该模型不存在", 404),
+        (model and model.owner_id != current_user_id and current_user.role != UserRole.ADMIN
+         and current_user.role != UserRole.DEVELOPER,
+         f"【删除模型 ID={model_id} 失败】当前登录用户非管理员/开发人员，权限不足", 403),
+    ]
+    for condition, message, code in validation_checks:
+        if condition:
+            new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
+            current_app.logger.warning(message + f', operator: {current_user}')
+            return jsonify({'operation': new_operation.to_dict()}), code
 
-#     # 删除实际文件
-#     file_path = os.path.join(current_app.root_path, model.file_path)
-#     if os.path.exists(file_path):
-#         os.remove(file_path)
+    # 删除实际文件
+    file_abs_path = os.path.join(current_app.root_path, model.model_path)
+    delete_file(file_abs_path)
 
-#     # 删除数据库记录
-#     db.session.delete(model)
-#     db.session.commit()
+    # 删除数据库记录
+    db.session.delete(model)
+    db.session.commit()
 
-#     # 记录操作
-#     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
+    # 记录操作
+    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-#     current_app.logger.info(f"【删除模型文件成功】deleted_model: {model.to_dict()}")
-#     return jsonify({
-#         'operation': new_operation.to_dict(),
-#         'deleted_model': model.to_dict(),
-#     }), 200
+    current_app.logger.info(f"【删除模型 ID={model_id} 成功】deleted_model: {model.to_dict()}, operator: {current_user}")
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'deleted_model': model.to_dict(),
+    }), 200
+
 
 @model_routes.route('/models/all', methods=['GET'])
 @jwt_required()
@@ -273,8 +274,8 @@ def all_models():
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
 
-    # 获取所有模型文件，先按照 disease_category 升序排序，再按照 fitness_score 降序排序
-    query = Model.query.order_by(Model.disease_category.asc(), Model.fitness_score.desc())
+    # 获取所有模型文件
+    query = Model.query
     page, models_total, pages = adjust_page_if_needed(query, page, per_page)
     models = query.paginate(page=page, per_page=per_page, error_out=False)
 
