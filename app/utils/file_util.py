@@ -29,7 +29,7 @@ def handle_file_upload(file, file_location):
     file_path = os.path.join('static', file_location, filename)  # 存储相对路径
     file.save(os.path.join(folder, filename))  # 存储文件
 
-    current_app.logger.info(f"{file_location} 文件已保存：{file_path}")
+    current_app.logger.debug(f"{file_location} 文件已保存：{file_path}")
     return file_path
 
 

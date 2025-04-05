@@ -106,6 +106,7 @@ def evaluate_disease_severity(disease_count, disease_perimeter, disease_area, sh
         'crack_width': (0.0, max_crack_width),
         'avg_hue': (0.0, 180.0)
     }
+    current_app.logger.debug(f'【评估病害】部分动态指标最大值：{min_max_values}')
 
     # 构造一个参数字典，确保所有需要的键都在其中
     params = {
@@ -123,6 +124,7 @@ def evaluate_disease_severity(disease_count, disease_perimeter, disease_area, sh
         key: min_max_normalize(params[key], *min_max_values[key])
         for key in weights.keys()
     }
+    current_app.logger.debug(f'【评估病害】归一化病害指标：{normalized_values}')
 
     # 计算加权总分
     weighted_score = sum(normalized_values[key] * weights[key] for key in weights)

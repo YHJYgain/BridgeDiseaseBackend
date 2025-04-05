@@ -16,8 +16,8 @@ class Model(db.Model):
         model_id (int): 模型的唯一标识符（主键）。
         model_name (str): 模型名称，必须唯一，不能为空。
         model_path (str): 模型存储路径，必须唯一，不能为空。
-        augmentation (str): 使用的数据增强方式。
         disease_category (str): 模型所处理的病害类别。
+        augmentation (str): 使用的数据增强方式。
         layers (int): 模型的层数。
         parameters (int): 模型的参数量。
         GFLOPs (float): 模型的计算量（Giga Floating-Point Operations）。
@@ -43,8 +43,8 @@ class Model(db.Model):
     model_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 模型 ID
     model_name = db.Column(db.String(255), unique=True, nullable=False)  # 模型名称
     model_path = db.Column(db.String(255), unique=True, nullable=False)  # 存储路径
-    augmentation = db.Column(db.String(255), default='原图')  # 数据增强方式
     disease_category = db.Column(db.String(100), nullable=False)  # 病害类别
+    augmentation = db.Column(db.String(255), default='原图')  # 数据增强方式
     layers = db.Column(db.Integer, nullable=False, default=0)  # 层数
     parameters = db.Column(db.Integer, nullable=False, default=0)  # 参数量
     GFLOPs = db.Column(db.Float, nullable=False, default=lambda: round(0.0, 1))  # 计算量
@@ -70,8 +70,8 @@ class Model(db.Model):
         return (f"Model(model_id={self.model_id}, "
                 f"model_name={self.model_name}, "
                 f"model_path={self.model_path}, "
-                f"augmentation={self.augmentation}, "
                 f"disease_category={self.disease_category}, "
+                f"augmentation={self.augmentation}, "
                 f"layers={self.layers}, "
                 f"parameters={self.parameters}, "
                 f"GFLOPs={self.GFLOPs}, "
@@ -97,8 +97,8 @@ class Model(db.Model):
             'model_id': self.model_id,
             'model_name': self.model_name,
             'model_path': self.model_path,
-            'augmentation': self.augmentation,
             'disease_category': self.disease_category,
+            'augmentation': self.augmentation,
             'layers': self.layers,
             'parameters': self.parameters,
             'GFLOPs': self.GFLOPs,

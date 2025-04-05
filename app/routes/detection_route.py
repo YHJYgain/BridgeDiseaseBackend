@@ -158,7 +158,7 @@ def detection_segmentation():
             total_crack_width += frame_crack_width
             total_avg_hue += frame_avg_hue
 
-        current_app.logger.info(f"【检测分割中】病害帧数: {disease_frame_count}")
+        current_app.logger.debug(f"【检测分割中】病害帧数: {disease_frame_count}")
 
         # 计算平均病害指标
         average_disease_count = total_disease_count // disease_frame_count if disease_frame_count != 0 else 0
