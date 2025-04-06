@@ -104,7 +104,7 @@ def evaluate_disease_severity(disease_count, disease_perimeter, disease_area, sh
         'shape_complexity': (0.0, 1.0),
         'texture_roughness': (0.0, 65025.0),
         'crack_width': (0.0, max_crack_width),
-        'avg_hue': (0.0, 180.0)
+        'avg_hue': (0.0, 179.0)
     }
     current_app.logger.debug(f'【评估病害】部分动态指标最大值：{min_max_values}')
 

@@ -7,10 +7,10 @@ from werkzeug.utils import secure_filename
 
 from app.constants import OperationType, UserRole
 from app.decorators import login_required
-from app.models import Operation, Media, db, User
+from app.models import Operation, Media, db, User, Detection
 from app.routes import media_routes
 from app.utils import handle_operation_failure, allowed_image_file, handle_file_upload, handle_operation_success, \
-    adjust_page_if_needed, get_pagination_params, allowed_video_file, get_media_info
+    adjust_page_if_needed, get_pagination_params, allowed_video_file, get_media_info, delete_file
 
 
 @media_routes.route('/upload', methods=['POST'])
@@ -196,6 +196,8 @@ def delete(media_id):
         (media and media.owner_id != current_user_id and current_user.role != UserRole.ADMIN
          and current_user.role != UserRole.DEVELOPER,
          f"【删除媒体 ID={media_id} 失败】当前登录用户非管理员/开发人员，权限不足", 403),
+        (media and Detection.query.filter_by(media_id=media_id).first(),
+         f"【删除媒体 ID={media_id} 失败】该媒体存在关联的检测分割记录，无法删除", 400),
     ]
     for condition, message, code in validation_checks:
         if condition:
@@ -204,9 +206,8 @@ def delete(media_id):
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 删除实际文件
-    file_path = os.path.join(current_app.root_path, media.file_path)
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    file_abs_path = os.path.join(current_app.root_path, media.media_path)
+    delete_file(file_abs_path)
 
     # 删除数据库记录
     db.session.delete(media)
@@ -215,7 +216,7 @@ def delete(media_id):
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【删除媒体成功】deleted_media: {media.to_dict()}, operator: {current_user}")
+    current_app.logger.info(f"【删除媒体 ID={media_id} 成功】deleted_media: {media.to_dict()}, operator: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'deleted_media': media.to_dict(),

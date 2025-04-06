@@ -17,7 +17,7 @@ from app.models import Detection, Media, Model, Operation, User, db
 from app.routes import detection_routes
 from app.utils import handle_operation_success, handle_operation_failure, compute_count, compute_perimeter, \
     compute_area, compute_shape_complexity, compute_texture_roughness, compute_crack_width, compute_avg_hue, \
-    evaluate_disease_severity, get_pagination_params, adjust_page_if_needed, unify_result_media_format
+    evaluate_disease_severity, get_pagination_params, adjust_page_if_needed, unify_result_media_format, delete_file
 
 # 获取文件夹配置，并确保目录存在
 MODELS_FOLDER = Config.MODELS_FOLDER
@@ -262,6 +262,58 @@ def detail(detection_id):
 
     return jsonify({
         'detection': detection.to_dict(),
+    }), 200
+
+
+@detection_routes.route('/delete/<int:detection_id>', methods=['GET'])
+@jwt_required()
+@login_required
+def delete(detection_id):
+    start_time = time.time()  # 记录操作开始时间
+
+    # 创建一个新的操作记录
+    new_operation = Operation(
+        operation_type=OperationType.DELETE,
+        description=f"删除检测分割 ID={detection_id} 记录",
+        ip_address=request.remote_addr,
+        device_info=request.user_agent.string,
+    )
+
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+
+    # 获取指定媒体
+    detection = Detection.query.get(detection_id)
+
+    # 校验字段
+    validation_checks = [
+        (not detection, f"【删除检测分割 ID={detection_id} 记录失败】该检测分割记录不存在", 404),
+        (detection and detection.owner_id != current_user_id and current_user.role != UserRole.ADMIN
+         and current_user.role != UserRole.DEVELOPER,
+         f"【删除检测分割 ID={detection_id} 记录失败】当前登录用户非管理员/开发人员，权限不足", 403),
+    ]
+    for condition, message, code in validation_checks:
+        if condition:
+            new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
+            current_app.logger.warning(message + f', operator: {current_user}')
+            return jsonify({'operation': new_operation.to_dict()}), code
+
+    # 删除实际文件
+    file_abs_path = os.path.join(current_app.root_path, detection.result_path)
+    delete_file(file_abs_path)
+
+    # 删除数据库记录
+    db.session.delete(detection)
+    db.session.commit()
+
+    # 记录操作
+    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
+
+    current_app.logger.info(f"【删除检测分割 ID={detection_id} 记录成功】deleted_detection: {detection.to_dict()}, operator: {current_user}")
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'deleted_detection': detection.to_dict(),
     }), 200
 
 

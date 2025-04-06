@@ -26,7 +26,7 @@ class Media(db.Model):
         owner_id (int): 所属用户的唯一标识符（外键）。
 
     Relationships:
-        owner (User): 一个媒体只属于一个用户（反向关系），表示该媒体的所有者。
+        owner (User): 一个媒体只属于一个用户，表示该媒体的所有者。
         detections (Detection): 一个媒体可以有多个检测分割记录（反向关系，表示该媒体参与的所有检测任务）。
     """
     __tablename__ = 'media'

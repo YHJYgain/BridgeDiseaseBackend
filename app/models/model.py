@@ -33,6 +33,7 @@ class Model(db.Model):
         fitness_score (float): 模型的适应度分数，用于评估模型的整体性能。
         created_at (datetime): 模型记录的创建时间，自动生成。
         updated_at (datetime): 模型记录的最后更新时间，自动更新。
+        owner_id (int): 所属用户的 ID（外键）。
 
     Relationships:
         owner (User): 一个模型只属于一个用户，表示该模型的所有者。

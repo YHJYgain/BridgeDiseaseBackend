@@ -67,7 +67,7 @@ class Detection(db.Model):
     owner = db.relationship('User', backref=db.backref('detections', lazy=True))
     # 设置与 Model 表的关系：一次检测分割只使用一个模型
     model = db.relationship('Model', backref=db.backref('detections', lazy=True))
-    # 设置与 Media 表的关系：一次检测分割只能使用一份媒体文件
+    # 设置与 Media 表的关系：一次检测分割只使用一份媒体文件
     media = db.relationship('Media', backref=db.backref('detections', lazy=True))
 
     def __repr__(self):

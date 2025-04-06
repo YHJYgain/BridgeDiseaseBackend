@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 
 from app.constants import OperationType, UserRole
 from app.decorators import login_required
-from app.models import Operation, Model, db, User
+from app.models import Operation, Model, db, User, Detection
 from app.routes import model_routes
 from app.utils import handle_operation_failure, allowed_model_file, handle_file_upload, handle_operation_success, \
     adjust_page_if_needed, get_pagination_params, delete_file
@@ -236,6 +236,8 @@ def delete(model_id):
         (model and model.owner_id != current_user_id and current_user.role != UserRole.ADMIN
          and current_user.role != UserRole.DEVELOPER,
          f"【删除模型 ID={model_id} 失败】当前登录用户非管理员/开发人员，权限不足", 403),
+        (model and Detection.query.filter_by(model_id=model_id).first(),
+         f"【删除模型 ID={model_id} 失败】该模型存在关联的检测分割记录，无法删除", 400),
     ]
     for condition, message, code in validation_checks:
         if condition:
