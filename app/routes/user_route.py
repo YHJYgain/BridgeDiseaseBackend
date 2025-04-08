@@ -11,7 +11,7 @@ from app.decorators import login_required
 from app.models import Operation, User, db
 from app.routes import user_routes
 from app.utils import is_valid_email, is_valid_avatar_file, is_valid_phone, handle_operation_failure, \
-    handle_operation_success, handle_file_upload
+    handle_operation_success, handle_file_upload, get_pagination_params, adjust_page_if_needed
 
 
 @user_routes.route('/register', methods=['POST'])
@@ -288,10 +288,12 @@ def update():
         (not is_valid_email(email), f"【更新用户资料失败】无效的邮箱格式：{email}", 400),
         (avatar_file and not is_valid_avatar_file(avatar_file), "【更新用户资料失败】头像文件类型或大小不合规", 400),
         (phone and not is_valid_phone(phone), f"【更新用户资料失败】无效的手机号格式：{phone}", 400),
-        (phone and (current_user.username != username or current_user.email != email or current_user.phone != phone)
-         and (User.query.filter_by(username=username).first() and User.query.filter_by(
-            email=email).first() and User.query.filter_by(phone=phone).first()),
-         f"【更新用户资料失败】用户 {username}/{email} 已存在", 400),
+        (current_user.username != username and User.query.filter_by(username=username).first(),
+         f"【更新用户资料失败】用户名 {username} 已注册过", 400),
+        (current_user.email != email and User.query.filter_by(email=email).first(),
+         f"【更新用户资料失败】邮箱 {email} 已注册过", 400),
+        (phone and current_user.phone != phone and User.query.filter_by(phone=phone).first(),
+         f"【更新用户资料失败】手机号 {phone} 已注册过", 400),
     ]
     for condition, message, code in validation_checks:
         if condition:
@@ -316,6 +318,81 @@ def update():
     return jsonify({
         'operation': new_operation.to_dict(),
         'updated_user': current_user.to_dict(),
+    }), 200
+
+
+@user_routes.route('/update/<int:user_id>', methods=['PUT'])
+@jwt_required()
+@login_required
+def update_user(user_id):
+    start_time = time.time()  # 记录操作开始时间
+
+    # 获取请求中的更新数据
+    username = request.form.get('username')
+    email = request.form.get('email')
+    password = request.form.get('password')
+    first_name = request.form.get('first_name')
+    last_name = request.form.get('last_name')
+    role = request.form.get('role')
+    avatar_file = request.files.get('avatar_file')
+    phone = request.form.get('phone')
+
+    # 创建一个新的操作记录
+    new_operation = Operation(
+        operation_type=OperationType.UPDATE,
+        description=f"更新用户 ID={user_id} 资料",
+        ip_address=request.remote_addr,
+        device_info=request.user_agent.string,
+    )
+
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+
+    # 获取指定用户
+    user = User.query.get(user_id)
+
+    # 校验字段
+    validation_checks = [
+        (not username or not email or not role, f"【更新用户 ID={user_id} 资料失败】用户名、邮箱或角色为空", 400),
+        (not is_valid_email(email), f"【更新用户 ID={user_id} 资料失败】无效的邮箱格式：{email}", 400),
+        (avatar_file and not is_valid_avatar_file(avatar_file),
+         f"【更新用户 ID={user_id} 资料失败】头像文件类型或大小不合规", 400),
+        (phone and not is_valid_phone(phone), f"【更新用户 ID={user_id} 资料失败】无效的手机号格式：{phone}", 400),
+        (not user, f"【更新用户 ID={user_id} 资料失败】该用户不存在", 404),
+        (user.username != username and User.query.filter_by(username=username).first(),
+         f"【更新用户 ID={user_id} 资料失败】用户名 {username} 已注册过", 400),
+        (user.email != email and User.query.filter_by(email=email).first(),
+         f"【更新用户 ID={user_id} 资料失败】邮箱 {email} 已注册过", 400),
+        (phone and user.phone != phone and User.query.filter_by(phone=phone).first(),
+         f"【更新用户 ID={user_id} 资料失败】手机号 {phone} 已注册过", 400),
+    ]
+    for condition, message, code in validation_checks:
+        if condition:
+            new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
+            current_app.logger.warning(message + f', operator: {current_user}')
+            return jsonify({'operation': new_operation.to_dict()}), code
+
+    # 更新用户信息
+    user.username = username
+    user.email = email
+    if password:  # 如果有密码，则更新密码；如果没有，则说明用户不需要更新密码
+        user.password = generate_password_hash(password)
+    user.first_name = first_name
+    user.last_name = last_name
+    user.role = UserRole(role.lower())
+    if avatar_file:  # 如果有头像文件，则上传并更新头像路径；如果没有，则说明用户不需要更新头像
+        user.avatar_path = handle_file_upload(avatar_file, 'avatars')
+    user.phone = phone
+    db.session.commit()
+
+    # 记录操作
+    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
+
+    current_app.logger.info(f"【更新用户 ID={user_id} 资料成功】updated_user: {user}, operator: {current_user}")
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'updated_user': user.to_dict(),
     }), 200
 
 
@@ -397,6 +474,40 @@ def delete():
     return jsonify({
         'operation': new_operation.to_dict(),
         'deleted_user': current_user.to_dict(),
+    }), 200
+
+
+@user_routes.route('/users/all', methods=['GET'])
+@jwt_required()
+@login_required
+def all_users():
+    # 获取分页参数（从请求中获取，默认为第 1 页，每页 5 条记录）
+    default_page = request.args.get('page', 1, type=int)
+    default_per_page = request.args.get('per_page', 5, type=int)
+    page, per_page = get_pagination_params(default_page, default_per_page)
+
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+
+    if current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER:
+        failure_message = f"【获取所有用户失败】当前登录用户非管理员/开发人员，权限不足"
+        current_app.logger.warning(failure_message + f', operator: {current_user}')
+        return jsonify({'failure_message': failure_message}), 403
+
+    # 查询所有用户（不包括软删除的用户）
+    query = User.query.filter(User.status != UserStatus.DELETED)
+    page, users_total, pages = adjust_page_if_needed(query, page, per_page)
+    users = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    current_app.logger.info(
+        f"【获取所有用户成功】total: {users_total}, per_page: {per_page}, page: {page}, pages: {pages}, users: {[user.to_dict() for user in users]}, operator: {current_user}")
+    return jsonify({
+        'users': [user.to_dict() for user in users],
+        'total': users_total,
+        'per_page': per_page,
+        'page': page,
+        'pages': pages,
     }), 200
 
 
