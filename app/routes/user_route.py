@@ -1,3 +1,4 @@
+import random
 import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -718,6 +719,37 @@ def all_users():
         'per_page': per_page,
         'page': page,
         'pages': pages,
+    }), 200
+
+
+@user_routes.route('/admin_info', methods=['GET'])
+def get_admin_info():
+    # 查询所有管理员用户
+    admins = User.query.filter(User.role == UserRole.ADMIN, User.status != UserStatus.BANNED,
+                               User.status != UserStatus.DELETED).all()
+
+    # 如果没有管理员，返回空列表
+    if not admins:
+        return jsonify({
+            'admin_info': []
+        }), 200
+
+    # 随机选择一个管理员
+    random_admin = random.choice(admins)
+
+    # 提取管理员的基本信息（只包含必要的联系信息）
+    admin_info = {
+        'username': random_admin.username,
+        'email': random_admin.email,
+        'phone': random_admin.phone,
+        'role': random_admin.role.name,
+        'first_name': random_admin.first_name,
+        'last_name': random_admin.last_name
+    }
+
+    # 将单个管理员信息放入列表中返回，保持 API 兼容性
+    return jsonify({
+        'admin_info': admin_info
     }), 200
 
 
