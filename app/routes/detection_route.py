@@ -17,7 +17,8 @@ from app.models import Detection, Media, Model, Operation, User, db
 from app.routes import detection_routes
 from app.utils import handle_operation_success, handle_operation_failure, compute_count, compute_perimeter, \
     compute_area, compute_shape_complexity, compute_texture_roughness, compute_crack_width, compute_avg_hue, \
-    evaluate_disease_severity, get_pagination_params, adjust_page_if_needed, unify_result_media_format, delete_file
+    evaluate_disease_severity, get_pagination_params, adjust_page_if_needed, unify_result_media_format, delete_file, \
+    user_rate_limit
 
 # 获取文件夹配置，并确保目录存在
 MODELS_FOLDER = Config.MODELS_FOLDER
@@ -31,6 +32,7 @@ os.makedirs(RESULTS_FOLDER, exist_ok=True)
 @detection_routes.route('/detection_segmentation', methods=['POST'])
 @jwt_required()
 @login_required
+@user_rate_limit(limit=5, period=60)  # 限制每个用户每分钟最多执行 5 次检测分割
 def detection_segmentation():
     start_time = time.time()  # 记录操作开始时间
 
@@ -253,7 +255,7 @@ def detail(detection_id):
         (not detection, f"【获取检测分割 ID={detection_id} 详情失败】该检测分割记录不存在", 404),
         (detection and detection.owner_id != current_user_id and current_user.role != UserRole.ADMIN
          and current_user.role != UserRole.DEVELOPER,
-         f"【获取检测分割 ID={detection_id} 详情失败】当前登录用户非管理员/开发人员，权限不足", 403),
+         f"【获取检测分割 ID={detection_id} 详情失败】您非管理员/开发人员，无法查看他人的检测分割记录详情", 403),
     ]
     for condition, message, code in validation_checks:
         if condition:
@@ -268,6 +270,7 @@ def detail(detection_id):
 @detection_routes.route('/delete/<int:detection_id>', methods=['GET'])
 @jwt_required()
 @login_required
+@user_rate_limit(limit=10, period=60)  # 限制每个用户每分钟最多删除 10 个检测记录
 def delete(detection_id):
     start_time = time.time()  # 记录操作开始时间
 
@@ -291,7 +294,7 @@ def delete(detection_id):
         (not detection, f"【删除检测分割 ID={detection_id} 记录失败】该检测分割记录不存在", 404),
         (detection and detection.owner_id != current_user_id and current_user.role != UserRole.ADMIN
          and current_user.role != UserRole.DEVELOPER,
-         f"【删除检测分割 ID={detection_id} 记录失败】当前登录用户非管理员/开发人员，权限不足", 403),
+         f"【删除检测分割 ID={detection_id} 记录失败】您非管理员/开发人员，无法删除他人的检测分割记录", 403),
     ]
     for condition, message, code in validation_checks:
         if condition:
@@ -310,7 +313,8 @@ def delete(detection_id):
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【删除检测分割 ID={detection_id} 记录成功】deleted_detection: {detection.to_dict()}, operator: {current_user}")
+    current_app.logger.info(
+        f"【删除检测分割 ID={detection_id} 记录成功】deleted_detection: {detection.to_dict()}, operator: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'deleted_detection': detection.to_dict(),
@@ -337,7 +341,7 @@ def user_detections(user_id):
     validation_checks = [
         (not user, f"【获取用户 ID={user_id} 检测分割记录失败】该用户不存在", 404),
         (current_user_id != user_id and current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
-         f"【获取用户 ID={user_id} 检测分割记录失败】当前登录用户非管理员/开发人员，权限不足", 403),
+         f"【获取用户 ID={user_id} 检测分割记录失败】您非管理员/开发人员，无法查看他人的检测分割记录", 403),
     ]
     for condition, message, code in validation_checks:
         if condition:
@@ -374,7 +378,7 @@ def all_detections():
     current_user = User.query.get(current_user_id)
 
     if current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER:
-        failure_message = f"【获取所有检测分割记录失败】当前登录用户非管理员/开发人员，权限不足"
+        failure_message = f"【获取所有检测分割记录失败】您非管理员/开发人员，权限不足"
         current_app.logger.warning(failure_message)
         return jsonify({'failure_message': failure_message}), 403
 

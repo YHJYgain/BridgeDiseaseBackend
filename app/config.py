@@ -18,7 +18,7 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)  # access token 过期时间
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)  # refresh token 过期时间
     CRACK_SCALA_FACTOR = 0.1  # 裂缝缩放因子
-
+    
     # 病害指标权重配置
     DISEASE_INDEX_WEIGHTS = {
         'disease_count': 0.15,
@@ -29,3 +29,7 @@ class Config:
         'crack_width': 0.1,
         'avg_hue': 0.1,
     }
+
+    # API 限流配置
+    RATE_LIMIT_DEFAULT_LIMIT = 60  # 默认每分钟允许的请求次数
+    RATE_LIMIT_DEFAULT_PERIOD = 60  # 默认限流时间窗口（s）

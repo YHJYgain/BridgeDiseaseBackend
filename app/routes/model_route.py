@@ -10,12 +10,13 @@ from app.decorators import login_required
 from app.models import Operation, Model, db, User, Detection
 from app.routes import model_routes
 from app.utils import handle_operation_failure, allowed_model_file, handle_file_upload, handle_operation_success, \
-    adjust_page_if_needed, get_pagination_params, delete_file
+    adjust_page_if_needed, get_pagination_params, delete_file, user_rate_limit
 
 
 @model_routes.route('/upload', methods=['POST'])
 @jwt_required()
 @login_required
+@user_rate_limit(limit=5, period=60)  # 限制每个用户每分钟最多上传5个模型
 def upload():
     start_time = time.time()  # 记录操作开始时间
 
@@ -58,7 +59,7 @@ def upload():
     # 校验字段
     validation_checks = [
         (model_file and not allowed_model_file(model_file), "【上传模型失败】模型文件不合规", 400),
-        (current_user.role != UserRole.DEVELOPER, f"【上传模型失败】当前登录用户非开发人员，权限不足", 403),
+        (current_user.role != UserRole.DEVELOPER, f"【上传模型失败】您非开发人员，无权上传模型", 403),
         (model_file and existing_model, f"【上传模型失败】模型 {file_name} 已存在，请重新上传", 400),
         (not disease_category or not layers or not parameters or not GFLOPs,
          "【上传模型失败】模型病害类别、层数、参数量或计算量为空", 400),
@@ -133,6 +134,7 @@ def model_detail(model_id):
 @model_routes.route('/update/<int:model_id>', methods=['PUT'])
 @jwt_required()
 @login_required
+@user_rate_limit(limit=10, period=60)  # 限制每个用户每分钟最多更新10个模型
 def update(model_id):
     start_time = time.time()  # 记录操作开始时间
 
@@ -171,9 +173,8 @@ def update(model_id):
     # 校验字段
     validation_checks = [
         (not updated_model, f"【更新模型 ID={model_id} 信息失败】该模型不存在", 404),
-        (updated_model and updated_model.owner_id != current_user_id and current_user.role != UserRole.ADMIN
-         and current_user.role != UserRole.DEVELOPER,
-         f"【更新模型 ID={model_id} 信息失败】当前登录用户非管理员/开发人员，权限不足", 403),
+        (updated_model and current_user.role != UserRole.DEVELOPER,
+         f"【更新模型 ID={model_id} 信息失败】您非开发人员，权限不足", 403),
     ]
     for condition, message, code in validation_checks:
         if condition:
@@ -212,6 +213,7 @@ def update(model_id):
 @model_routes.route('/delete/<int:model_id>', methods=['DELETE'])
 @jwt_required()
 @login_required
+@user_rate_limit(limit=10, period=60)  # 限制每个用户每分钟最多删除10个模型
 def delete(model_id):
     start_time = time.time()  # 记录操作开始时间
 
@@ -233,9 +235,8 @@ def delete(model_id):
     # 校验字段
     validation_checks = [
         (not model, f"【删除模型 ID={model_id} 失败】该模型不存在", 404),
-        (model and model.owner_id != current_user_id and current_user.role != UserRole.ADMIN
-         and current_user.role != UserRole.DEVELOPER,
-         f"【删除模型 ID={model_id} 失败】当前登录用户非管理员/开发人员，权限不足", 403),
+        (model and current_user.role != UserRole.DEVELOPER,
+         f"【删除模型 ID={model_id} 失败】您非开发人员，权限不足", 403),
         (model and Detection.query.filter_by(model_id=model_id).first(),
          f"【删除模型 ID={model_id} 失败】该模型存在关联的检测分割记录，无法删除", 400),
     ]

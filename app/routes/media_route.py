@@ -10,12 +10,13 @@ from app.decorators import login_required
 from app.models import Operation, Media, db, User, Detection
 from app.routes import media_routes
 from app.utils import handle_operation_failure, allowed_image_file, handle_file_upload, handle_operation_success, \
-    adjust_page_if_needed, get_pagination_params, allowed_video_file, get_media_info, delete_file
+    adjust_page_if_needed, get_pagination_params, allowed_video_file, get_media_info, delete_file, user_rate_limit
 
 
 @media_routes.route('/upload', methods=['POST'])
 @jwt_required()
 @login_required
+@user_rate_limit(limit=5, period=60)  # 限制每个用户每分钟最多上传 5 个媒体
 def upload():
     start_time = time.time()  # 记录操作开始时间
 
@@ -105,7 +106,7 @@ def detail(media_id):
         (not media, f"【获取媒体 ID={media_id} 详情失败】该媒体不存在", 404),
         (media and media.owner_id != current_user_id and current_user.role != UserRole.ADMIN
          and current_user.role != UserRole.DEVELOPER,
-         f"【获取媒体 ID={media_id} 详情失败】当前登录用户非管理员/开发人员，权限不足", 403),
+         f"【获取媒体 ID={media_id} 详情失败】您非管理员/开发人员，无法查看他人的媒体详情", 403),
     ]
     for condition, message, code in validation_checks:
         if condition:
@@ -146,7 +147,7 @@ def update(media_id):
         (not updated_media, f"【更新媒体 ID={media_id} 信息失败】该媒体不存在", 404),
         (updated_media and updated_media.owner_id != current_user_id and current_user.role != UserRole.ADMIN
          and current_user.role != UserRole.DEVELOPER,
-         f"【更新媒体 ID={media_id} 信息失败】当前登录用户非管理员/开发人员，权限不足", 403),
+         f"【更新媒体 ID={media_id} 信息失败】您非管理员/开发人员，无法更新他人的媒体信息", 403),
     ]
     for condition, message, code in validation_checks:
         if condition:
@@ -172,6 +173,7 @@ def update(media_id):
 @media_routes.route('/delete/<int:media_id>', methods=['DELETE'])
 @jwt_required()
 @login_required
+@user_rate_limit(limit=10, period=60)  # 限制每个用户每分钟最多删除 10 个媒体
 def delete(media_id):
     start_time = time.time()  # 记录操作开始时间
 
@@ -195,7 +197,7 @@ def delete(media_id):
         (not media, f"【删除媒体 ID={media_id} 失败】该媒体不存在", 404),
         (media and media.owner_id != current_user_id and current_user.role != UserRole.ADMIN
          and current_user.role != UserRole.DEVELOPER,
-         f"【删除媒体 ID={media_id} 失败】当前登录用户非管理员/开发人员，权限不足", 403),
+         f"【删除媒体 ID={media_id} 失败】您非管理员/开发人员，无法删除他人的媒体", 403),
         (media and Detection.query.filter_by(media_id=media_id).first(),
          f"【删除媒体 ID={media_id} 失败】该媒体存在关联的检测分割记录，无法删除", 400),
     ]
@@ -243,7 +245,7 @@ def user_medias(user_id):
     validation_checks = [
         (not user, f"【获取用户 ID={user_id} 媒体失败】该用户不存在", 404),
         (current_user_id != user_id and current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
-         f"【获取用户 ID={user_id} 操作记录失败】当前登录用户非管理员/开发人员，权限不足", 403),
+         f"【获取用户 ID={user_id} 媒体失败】您非管理员/开发人员，无法查看他人的媒体", 403),
     ]
     for condition, message, code in validation_checks:
         if condition:
@@ -280,7 +282,7 @@ def all_medias():
     current_user = User.query.get(current_user_id)
 
     if current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER:
-        failure_message = f"【获取所有媒体失败】当前登录用户非管理员/开发人员，权限不足"
+        failure_message = f"【获取所有媒体失败】您非管理员/开发人员，权限不足"
         current_app.logger.warning(failure_message + f', operator: {current_user}')
         return jsonify({'failure_message': failure_message}), 403
 

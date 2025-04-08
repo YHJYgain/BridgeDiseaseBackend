@@ -11,10 +11,12 @@ from app.decorators import login_required
 from app.models import Operation, User, db
 from app.routes import user_routes
 from app.utils import is_valid_email, is_valid_avatar_file, is_valid_phone, handle_operation_failure, \
-    handle_operation_success, handle_file_upload, get_pagination_params, adjust_page_if_needed
+    handle_operation_success, handle_file_upload, get_pagination_params, adjust_page_if_needed, rate_limit, \
+    user_rate_limit
 
 
 @user_routes.route('/register', methods=['POST'])
+@rate_limit(key_func='ip', limit=5, period=60)  # 限制同一 IP 每分钟最多 5 次注册请求
 def register():
     start_time = time.time()  # 记录操作开始时间
 
@@ -42,9 +44,11 @@ def register():
     # 校验字段
     validation_checks = [
         (not username or not email or not password, "【注册失败】用户名、邮箱或密码为空", 400),
-        (user and user.status == UserStatus.BANNED, f"【注册失败】该用户 {username}/{email} 已被封禁", 403),
-        (user and (user.status != UserStatus.DELETED or not user.deleted_at),
-         f"【注册失败】该用户 {username}/{email} 已注册，请直接登录", 400),
+        (user and user.status == UserStatus.BANNED,
+         f"【注册失败】您的账号已被封禁，如有疑问请联系管理员/开发人员", 403),
+        (user and (user.status == UserStatus.DELETED or user.deleted_at),
+         f"【注册失败】您的账号已注销，若要重新注册请联系管理员/开发人员", 403),
+        (user and (user.status != UserStatus.DELETED or not user.deleted_at), f"【注册失败】您已注册过，请直接登录", 400),
         (not is_valid_email(email), f"【注册失败】无效的邮箱格式：{email}", 400),
         (role not in UserRole.list(), f"【注册失败】无效的角色：{role}，只限 'admin', 'developer', 'user'", 400),
         (avatar_file and not is_valid_avatar_file(avatar_file), "【注册失败】头像文件不合规", 400),
@@ -56,33 +60,18 @@ def register():
             current_app.logger.warning(message)
             return jsonify({'operation': new_operation.to_dict()}), code
 
-    if user:
-        # 已软删除用户，直接更新信息
-        if user.status == UserStatus.DELETED or user.deleted_at:
-            user.username = username
-            user.email = email
-            user.password = generate_password_hash(password)
-            user.first_name = first_name
-            user.last_name = last_name
-            user.role = UserRole(role)
-            user.avatar_path = handle_file_upload(avatar_file, 'avatars')
-            user.phone = phone
-            user.status = UserStatus.INACTIVE
-            user.deleted_at = None
-    else:
-        # 新用户，创建新记录
-        user = User(
-            username=username,
-            email=email,
-            password=generate_password_hash(password),
-            first_name=first_name,
-            last_name=last_name,
-            role=UserRole(role),
-            avatar_path=handle_file_upload(avatar_file, 'avatars'),
-            phone=phone,
-        )
-        db.session.add(user)
-
+    # 新用户，创建新记录
+    user = User(
+        username=username,
+        email=email,
+        password=generate_password_hash(password),
+        first_name=first_name,
+        last_name=last_name,
+        role=UserRole(role),
+        avatar_path=handle_file_upload(avatar_file, 'avatars'),
+        phone=phone,
+    )
+    db.session.add(user)
     db.session.commit()
 
     # 记录操作
@@ -96,6 +85,7 @@ def register():
 
 
 @user_routes.route('/login', methods=['POST'])
+@rate_limit(key_func='ip', limit=5, period=60)  # 限制同一 IP 每分钟最多 5 次登录请求
 def login():
     start_time = time.time()  # 记录操作开始时间
 
@@ -118,10 +108,10 @@ def login():
     # 校验字段
     validation_checks = [
         (not username_or_email or not password, "【登录失败】用户名或邮箱和密码是必填项", 400),
-        (not user, f"【登录失败】该用户 {username_or_email} 尚未注册，请先注册", 400),
-        (user and user.status == UserStatus.BANNED, f"【登录失败】该用户 {username_or_email} 已被封禁", 403),
+        (not user, f"【登录失败】用户 {username_or_email} 尚未注册，请先注册", 400),
+        (user and user.status == UserStatus.BANNED, f"【登录失败】您已被封禁，如有疑问请联系管理员/开发人员", 403),
         (user and (user.status == UserStatus.DELETED or user.deleted_at),
-         f"【登录失败】该用户 {username_or_email} 已注销", 400),
+         f"【登录失败】您的账号已注销，若需重新注册请联系管理员/开发人员", 403),
         (user and not check_password_hash(user.password, password), "【登录失败】密码错误", 400),
     ]
     for condition, message, code in validation_checks:
@@ -143,7 +133,7 @@ def login():
     new_operation = handle_operation_success(new_operation, start_time, user.user_id)
 
     current_app.logger.info(
-        f"【登录成功】login_user: {user.username}, access_token：{access_token}, refresh_token: {refresh_token}")
+        f"【登录成功】login_user: {user}, access_token：{access_token}, refresh_token: {refresh_token}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'login_user': user.to_dict(),
@@ -178,7 +168,7 @@ def logout():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【登出成功】logout_user: {current_user.username}")
+    current_app.logger.info(f"【登出成功】logout_user: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'logout_user': current_user.to_dict(),
@@ -187,6 +177,7 @@ def logout():
 
 @user_routes.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
+@rate_limit(key_func='ip', limit=10, period=60)  # 限制同一 IP 每分钟最多 10 次刷新 token 请求
 def refresh():
     start_time = time.time()  # 记录操作开始时间
 
@@ -244,7 +235,7 @@ def detail(user_id):
         (not user, f"【获取用户 ID={user_id} 详情失败】该用户不存在", 404),
         (user and user.user_id != current_user_id and current_user.role != UserRole.ADMIN
          and current_user.role != UserRole.DEVELOPER,
-         f"【获取用户 ID={user_id} 详情失败】当前登录用户非管理员/开发人员，权限不足", 403),
+         f"【获取用户 ID={user_id} 详情失败】当前登录用户非管理员/开发人员，无权查看其他用户信息", 403),
     ]
     for condition, message, code in validation_checks:
         if condition:
@@ -350,21 +341,23 @@ def update_user(user_id):
     current_user = User.query.get(current_user_id)
 
     # 获取指定用户
-    user = User.query.get(user_id)
+    updated_user = User.query.get(user_id)
 
     # 校验字段
     validation_checks = [
+        (current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
+         f"【更新用户 ID={user_id} 资料失败】您非管理员/开发人员，无权修改其他用户信息", 403),
         (not username or not email or not role, f"【更新用户 ID={user_id} 资料失败】用户名、邮箱或角色为空", 400),
         (not is_valid_email(email), f"【更新用户 ID={user_id} 资料失败】无效的邮箱格式：{email}", 400),
         (avatar_file and not is_valid_avatar_file(avatar_file),
          f"【更新用户 ID={user_id} 资料失败】头像文件类型或大小不合规", 400),
         (phone and not is_valid_phone(phone), f"【更新用户 ID={user_id} 资料失败】无效的手机号格式：{phone}", 400),
-        (not user, f"【更新用户 ID={user_id} 资料失败】该用户不存在", 404),
-        (user.username != username and User.query.filter_by(username=username).first(),
+        (not updated_user, f"【更新用户 ID={user_id} 资料失败】该用户不存在", 404),
+        (updated_user.username != username and User.query.filter_by(username=username).first(),
          f"【更新用户 ID={user_id} 资料失败】用户名 {username} 已注册过", 400),
-        (user.email != email and User.query.filter_by(email=email).first(),
+        (updated_user.email != email and User.query.filter_by(email=email).first(),
          f"【更新用户 ID={user_id} 资料失败】邮箱 {email} 已注册过", 400),
-        (phone and user.phone != phone and User.query.filter_by(phone=phone).first(),
+        (phone and updated_user.phone != phone and User.query.filter_by(phone=phone).first(),
          f"【更新用户 ID={user_id} 资料失败】手机号 {phone} 已注册过", 400),
     ]
     for condition, message, code in validation_checks:
@@ -374,31 +367,32 @@ def update_user(user_id):
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 更新用户信息
-    user.username = username
-    user.email = email
+    updated_user.username = username
+    updated_user.email = email
     if password:  # 如果有密码，则更新密码；如果没有，则说明用户不需要更新密码
-        user.password = generate_password_hash(password)
-    user.first_name = first_name
-    user.last_name = last_name
-    user.role = UserRole(role.lower())
+        updated_user.password = generate_password_hash(password)
+    updated_user.first_name = first_name
+    updated_user.last_name = last_name
+    updated_user.role = UserRole(role.lower())
     if avatar_file:  # 如果有头像文件，则上传并更新头像路径；如果没有，则说明用户不需要更新头像
-        user.avatar_path = handle_file_upload(avatar_file, 'avatars')
-    user.phone = phone
+        updated_user.avatar_path = handle_file_upload(avatar_file, 'avatars')
+    updated_user.phone = phone
     db.session.commit()
 
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【更新用户 ID={user_id} 资料成功】updated_user: {user}, operator: {current_user}")
+    current_app.logger.info(f"【更新用户 ID={user_id} 资料成功】updated_user: {updated_user}, operator: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
-        'updated_user': user.to_dict(),
+        'updated_user': updated_user.to_dict(),
     }), 200
 
 
 @user_routes.route('/change_password', methods=['PUT'])
 @jwt_required()
 @login_required
+@user_rate_limit(limit=3, period=60)  # 限制每个用户每分钟最多 3 次修改密码请求
 def change_password():
     start_time = time.time()  # 记录操作开始时间
 
@@ -436,7 +430,7 @@ def change_password():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【修改密码成功】current_user: {current_user.username}, old_password: {current_password}")
+    current_app.logger.info(f"【修改密码成功】current_user: {current_user}, old_password: {current_password}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'current_user': current_user.to_dict(),
@@ -447,13 +441,14 @@ def change_password():
 @user_routes.route('/delete', methods=['DELETE'])
 @jwt_required()
 @login_required
+@user_rate_limit(limit=2, period=60)  # 限制每个用户每分钟最多 2 次注销账号请求
 def delete():
     start_time = time.time()  # 记录操作开始时间
 
     # 创建一个新的操作记录
     new_operation = Operation(
         operation_type=OperationType.DELETE,
-        description="删除账户",
+        description="注销账户",
         ip_address=request.remote_addr,
         device_info=request.user_agent.string,
     )
@@ -470,10 +465,225 @@ def delete():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【删除账户成功】deleted_user: {current_user.username}")
+    current_app.logger.info(f"【注销账户成功】deleted_user: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'deleted_user': current_user.to_dict(),
+    }), 200
+
+
+@user_routes.route('/delete/<int:user_id>', methods=['DELETE'])
+@jwt_required()
+@login_required
+@user_rate_limit(limit=2, period=60)  # 限制每个用户每分钟最多 2 次注销账号请求
+def delete_user(user_id):
+    start_time = time.time()  # 记录操作开始时间
+
+    # 创建一个新的操作记录
+    new_operation = Operation(
+        operation_type=OperationType.DELETE,
+        description=f"注销用户 ID={user_id}",
+        ip_address=request.remote_addr,
+        device_info=request.user_agent.string,
+    )
+
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+
+    # 获取指定用户
+    deleted_user = User.query.get(user_id)
+
+    # 校验字段
+    validation_checks = [
+        (current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
+         f"【注销用户 ID={user_id} 失败】您非管理员/开发人员，无权注销其他用户", 403),
+        (not deleted_user, f"【注销用户 ID={user_id} 失败】该用户不存在", 404),
+        (current_user.role != UserRole.DEVELOPER and (deleted_user.role == UserRole.ADMIN
+                                                      or deleted_user.role == UserRole.DEVELOPER),
+         f"【注销用户 ID={user_id} 失败】您非开发人员，无权注销管理员/开发人员", 400),
+        (deleted_user.status == UserStatus.DELETED or deleted_user.deleted_at,
+         f"【注销用户 ID={user_id} 失败】该用户已注销", 400),
+    ]
+    for condition, message, code in validation_checks:
+        if condition:
+            new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
+            current_app.logger.warning(message + f', operator: {current_user}')
+            return jsonify({'operation': new_operation.to_dict()}), code
+
+    # 软删除用户
+    deleted_user.deleted_at = datetime.now(ZoneInfo("Asia/Shanghai"))
+    deleted_user.status = UserStatus.DELETED
+    db.session.commit()
+
+    # 记录操作
+    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
+
+    current_app.logger.info(f"【注销用户 ID={user_id} 成功】deleted_user: {deleted_user}, operator: {current_user}")
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'deleted_user': deleted_user.to_dict(),
+    }), 200
+
+
+@user_routes.route('/undelete/<int:user_id>', methods=['PUT'])
+@jwt_required()
+@login_required
+@user_rate_limit(limit=2, period=60)  # 限制每个用户每分钟最多 2 次恢复注销账号请求
+def undelete_user(user_id):
+    start_time = time.time()  # 记录操作开始时间
+
+    # 创建一个新的操作记录
+    new_operation = Operation(
+        operation_type=OperationType.DELETE,
+        description=f"恢复注销用户 ID={user_id}",
+        ip_address=request.remote_addr,
+        device_info=request.user_agent.string,
+    )
+
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+
+    # 获取指定用户
+    undeleted_user = User.query.get(user_id)
+
+    # 校验字段
+    validation_checks = [
+        (current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
+         f"【恢复注销用户 ID={user_id} 失败】您非管理员/开发人员，无权恢复注销其他用户", 403),
+        (not undeleted_user, f"【恢复注销用户 ID={user_id} 失败】该用户不存在", 404),
+        (current_user.role != UserRole.DEVELOPER and (undeleted_user.role == UserRole.ADMIN
+                                                      or undeleted_user.role == UserRole.DEVELOPER),
+         f"【恢复注销用户 ID={user_id} 失败】您非开发人员，无权恢复注销管理员/开发人员", 400),
+        (undeleted_user.status != UserStatus.DELETED or not undeleted_user.deleted_at,
+         f"【恢复注销用户 ID={user_id} 失败】该用户未注销", 400),
+    ]
+    for condition, message, code in validation_checks:
+        if condition:
+            new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
+            current_app.logger.warning(message + f', operator: {current_user}')
+            return jsonify({'operation': new_operation.to_dict()}), code
+
+    # 恢复注销用户
+    undeleted_user.deleted_at = None
+    undeleted_user.status = UserStatus.INACTIVE
+    db.session.commit()
+
+    # 记录操作
+    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
+
+    current_app.logger.info(
+        f"【恢复注销用户 ID={user_id} 成功】undeleted_user: {undeleted_user}, operator: {current_user}")
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'undeleted_user': undeleted_user.to_dict(),
+    }), 200
+
+
+@user_routes.route('/ban/<int:user_id>', methods=['PUT'])
+@jwt_required()
+@login_required
+@user_rate_limit(limit=3, period=60)  # 限制每个用户每分钟最多 3 次封禁用户请求
+def ban(user_id):
+    start_time = time.time()  # 记录操作开始时间
+
+    # 创建一个新的操作记录
+    new_operation = Operation(
+        operation_type=OperationType.UPDATE,
+        description=f"封禁用户 ID={user_id}",
+        ip_address=request.remote_addr,
+        device_info=request.user_agent.string,
+    )
+
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+
+    # 获取指定用户
+    baned_user = User.query.get(user_id)
+
+    # 校验字段
+    validation_checks = [
+        (current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
+         f"【封禁用户 ID={user_id} 失败】您非管理员/开发人员，无权封禁其他用户", 403),
+        (not baned_user, f"【封禁用户 ID={user_id} 失败】该用户不存在", 404),
+        (current_user.role != UserRole.DEVELOPER and (baned_user.role == UserRole.ADMIN
+                                                      or baned_user.role == UserRole.DEVELOPER),
+         f"【封禁用户 ID={user_id} 失败】您非开发人员，无权封禁管理员/开发人员", 400),
+        (baned_user.status == UserStatus.BANNED, f"【封禁用户 ID={user_id} 失败】该用户已被封禁", 400),
+        (baned_user.status == UserStatus.DELETED, f"【封禁用户 ID={user_id} 失败】该用户已注销", 400),
+    ]
+    for condition, message, code in validation_checks:
+        if condition:
+            new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
+            current_app.logger.warning(message + f', operator: {current_user}')
+            return jsonify({'operation': new_operation.to_dict()}), code
+
+    # 封禁用户
+    baned_user.status = UserStatus.BANNED
+    db.session.commit()
+
+    # 记录操作
+    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
+
+    current_app.logger.info(f"【封禁用户 ID={user_id} 成功】baned_user: {baned_user}, operator: {current_user}")
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'baned_user': baned_user.to_dict(),
+    }), 200
+
+
+@user_routes.route('/unban/<int:user_id>', methods=['PUT'])
+@jwt_required()
+@login_required
+@user_rate_limit(limit=3, period=60)  # 限制每个用户每分钟最多 3 次解禁用户请求
+def unban(user_id):
+    start_time = time.time()  # 记录操作开始时间
+
+    # 创建一个新的操作记录
+    new_operation = Operation(
+        operation_type=OperationType.UPDATE,
+        description=f"解封用户 ID={user_id}",
+        ip_address=request.remote_addr,
+        device_info=request.user_agent.string,
+    )
+
+    # 获取当前用户身份（使用 access token）
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+
+    # 获取指定用户
+    unbaned_user = User.query.get(user_id)
+
+    # 校验字段
+    validation_checks = [
+        (current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
+         f"【解封用户 ID={user_id} 失败】您非管理员/开发人员，无权解封其他用户", 403),
+        (not unbaned_user, f"【解封用户 ID={user_id} 失败】该用户不存在", 404),
+        (current_user.role != UserRole.DEVELOPER and (unbaned_user.role == UserRole.ADMIN
+                                                      or unbaned_user.role == UserRole.DEVELOPER),
+         f"【解封用户 ID={user_id} 失败】您非开发人员，无权解封管理员/开发人员", 400),
+        (unbaned_user.status != UserStatus.BANNED, f"【解封用户 ID={user_id} 失败】该用户未被封禁", 400),
+        (unbaned_user.status == UserStatus.DELETED, f"【解封用户 ID={user_id} 失败】该用户已注销", 400),
+    ]
+    for condition, message, code in validation_checks:
+        if condition:
+            new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
+            current_app.logger.warning(message + f', operator: {current_user}')
+            return jsonify({'operation': new_operation.to_dict()}), code
+
+    # 解封用户
+    unbaned_user.status = UserStatus.INACTIVE
+    db.session.commit()
+
+    # 记录操作
+    new_operation = handle_operation_success(new_operation, start_time, current_user_id)
+
+    current_app.logger.info(f"【解封用户 ID={user_id} 成功】unbaned_user: {unbaned_user}, operator: {current_user}")
+    return jsonify({
+        'operation': new_operation.to_dict(),
+        'unbaned_user': unbaned_user.to_dict(),
     }), 200
 
 
@@ -491,12 +701,12 @@ def all_users():
     current_user = User.query.get(current_user_id)
 
     if current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER:
-        failure_message = f"【获取所有用户失败】当前登录用户非管理员/开发人员，权限不足"
+        failure_message = f"【获取所有用户失败】您非管理员/开发人员，权限不足"
         current_app.logger.warning(failure_message + f', operator: {current_user}')
         return jsonify({'failure_message': failure_message}), 403
 
-    # 查询所有用户（不包括软删除的用户）
-    query = User.query.filter(User.status != UserStatus.DELETED)
+    # 查询所有用户
+    query = User.query
     page, users_total, pages = adjust_page_if_needed(query, page, per_page)
     users = query.paginate(page=page, per_page=per_page, error_out=False)
 

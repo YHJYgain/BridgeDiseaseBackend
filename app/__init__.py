@@ -10,6 +10,7 @@ from .errors import *
 from .models import init_db
 from .routes import register_routes
 from .utils import init_jwt
+from .utils.rate_limiter import configure_rate_limiting
 
 
 def create_app():
@@ -39,6 +40,9 @@ def create_app():
 
     # 注册蓝图
     register_routes(app)
+
+    # 配置 API 限流 - 只使用内存存储作为限流后端
+    configure_rate_limiting(app)
 
     # 注册全局错误处理器
     register_error_handlers(app)
