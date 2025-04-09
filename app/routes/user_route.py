@@ -728,10 +728,10 @@ def get_admin_info():
     admins = User.query.filter(User.role == UserRole.ADMIN, User.status != UserStatus.BANNED,
                                User.status != UserStatus.DELETED).all()
 
-    # 如果没有管理员，返回空列表
+    # 如果没有管理员，返回 None
     if not admins:
         return jsonify({
-            'admin_info': []
+            'admin_info': None
         }), 200
 
     # 随机选择一个管理员
@@ -750,6 +750,37 @@ def get_admin_info():
     # 将单个管理员信息放入列表中返回，保持 API 兼容性
     return jsonify({
         'admin_info': admin_info
+    }), 200
+
+
+@user_routes.route('/developer_info', methods=['GET'])
+def get_developer_info():
+    # 查询所有开发人员用户
+    developers = User.query.filter(User.role == UserRole.DEVELOPER, User.status != UserStatus.BANNED,
+                                   User.status != UserStatus.DELETED).all()
+
+    # 如果没有开发人员，返回 None
+    if not developers:
+        return jsonify({
+            'developer_info': None
+        }), 200
+
+    # 随机选择一个开发人员
+    random_developer = random.choice(developers)
+
+    # 提取开发人员的基本信息（只包含必要的联系信息）
+    developer_info = {
+        'username': random_developer.username,
+        'email': random_developer.email,
+        'phone': random_developer.phone,
+        'role': random_developer.role.name,
+        'first_name': random_developer.first_name,
+        'last_name': random_developer.last_name
+    }
+
+    # 将单个开发人员信息放入列表中返回，保持 API 兼容性
+    return jsonify({
+        'developer_info': developer_info
     }), 200
 
 

@@ -32,7 +32,7 @@ os.makedirs(RESULTS_FOLDER, exist_ok=True)
 @detection_routes.route('/detection_segmentation', methods=['POST'])
 @jwt_required()
 @login_required
-@user_rate_limit(limit=5, period=60)  # 限制每个用户每分钟最多执行 5 次检测分割
+@user_rate_limit(limit=10, period=60)  # 限制每个用户每分钟最多执行 10 次检测分割
 def detection_segmentation():
     start_time = time.time()  # 记录操作开始时间
 
