@@ -213,7 +213,6 @@ def detection_segmentation():
             'new_detection': new_detection.to_dict(),
             'is_new_detection': not bool(existing_detection),
         }), 200
-
     except Exception as error:
         # 发生错误，更新任务状态为失败
         new_detection.status = TaskStatus.FAILED
@@ -271,7 +270,7 @@ def detail(detection_id):
 @jwt_required()
 @login_required
 @user_rate_limit(limit=10, period=60)  # 限制每个用户每分钟最多删除 10 个检测记录
-def delete(detection_id):
+def delete_detection(detection_id):
     start_time = time.time()  # 记录操作开始时间
 
     # 创建一个新的操作记录
@@ -287,12 +286,12 @@ def delete(detection_id):
     current_user = User.query.get(current_user_id)
 
     # 获取指定媒体
-    detection = Detection.query.get(detection_id)
+    deleted_detection = Detection.query.get(detection_id)
 
     # 校验字段
     validation_checks = [
-        (not detection, f"【删除检测分割 ID={detection_id} 记录失败】该检测分割记录不存在", 404),
-        (detection and detection.owner_id != current_user_id and current_user.role != UserRole.ADMIN
+        (not deleted_detection, f"【删除检测分割 ID={detection_id} 记录失败】该检测分割记录不存在", 404),
+        (deleted_detection and deleted_detection.owner_id != current_user_id and current_user.role != UserRole.ADMIN
          and current_user.role != UserRole.DEVELOPER,
          f"【删除检测分割 ID={detection_id} 记录失败】您非管理员/开发人员，无法删除他人的检测分割记录", 403),
     ]
@@ -303,21 +302,21 @@ def delete(detection_id):
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 删除实际文件
-    file_abs_path = os.path.join(current_app.root_path, detection.result_path)
+    file_abs_path = os.path.join(current_app.root_path, deleted_detection.result_path)
     delete_file(file_abs_path)
 
     # 删除数据库记录
-    db.session.delete(detection)
+    db.session.delete(deleted_detection)
     db.session.commit()
 
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
     current_app.logger.info(
-        f"【删除检测分割 ID={detection_id} 记录成功】deleted_detection: {detection.to_dict()}, operator: {current_user}")
+        f"【删除检测分割 ID={detection_id} 记录成功】deleted_detection: {deleted_detection.to_dict()}, operator: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
-        'deleted_detection': detection.to_dict(),
+        'deleted_detection': deleted_detection.to_dict(),
     }), 200
 
 

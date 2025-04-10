@@ -174,7 +174,7 @@ def update(media_id):
 @jwt_required()
 @login_required
 @user_rate_limit(limit=10, period=60)  # 限制每个用户每分钟最多删除 10 个媒体
-def delete(media_id):
+def delete_media(media_id):
     start_time = time.time()  # 记录操作开始时间
 
     # 创建一个新的操作记录
@@ -190,15 +190,15 @@ def delete(media_id):
     current_user = User.query.get(current_user_id)
 
     # 获取指定媒体
-    media = Media.query.get(media_id)
+    deleted_media = Media.query.get(media_id)
 
     # 校验字段
     validation_checks = [
-        (not media, f"【删除媒体 ID={media_id} 失败】该媒体不存在", 404),
-        (media and media.owner_id != current_user_id and current_user.role != UserRole.ADMIN
+        (not deleted_media, f"【删除媒体 ID={media_id} 失败】该媒体不存在", 404),
+        (deleted_media and deleted_media.owner_id != current_user_id and current_user.role != UserRole.ADMIN
          and current_user.role != UserRole.DEVELOPER,
          f"【删除媒体 ID={media_id} 失败】您非管理员/开发人员，无法删除他人的媒体", 403),
-        (media and Detection.query.filter_by(media_id=media_id).first(),
+        (deleted_media and Detection.query.filter_by(media_id=media_id).first(),
          f"【删除媒体 ID={media_id} 失败】该媒体存在关联的检测分割记录，无法删除", 400),
     ]
     for condition, message, code in validation_checks:
@@ -208,20 +208,20 @@ def delete(media_id):
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 删除实际文件
-    file_abs_path = os.path.join(current_app.root_path, media.media_path)
+    file_abs_path = os.path.join(current_app.root_path, deleted_media.media_path)
     delete_file(file_abs_path)
 
     # 删除数据库记录
-    db.session.delete(media)
+    db.session.delete(deleted_media)
     db.session.commit()
 
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【删除媒体 ID={media_id} 成功】deleted_media: {media.to_dict()}, operator: {current_user}")
+    current_app.logger.info(f"【删除媒体 ID={media_id} 成功】deleted_media: {deleted_media.to_dict()}, operator: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
-        'deleted_media': media.to_dict(),
+        'deleted_media': deleted_media.to_dict(),
     }), 200
 
 

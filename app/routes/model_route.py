@@ -109,7 +109,7 @@ def upload():
 @model_routes.route('/detail/<int:model_id>', methods=['GET'])
 @jwt_required()
 @login_required
-def model_detail(model_id):
+def detail(model_id):
     # 获取当前用户身份（使用 access token）
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
@@ -214,7 +214,7 @@ def update(model_id):
 @jwt_required()
 @login_required
 @user_rate_limit(limit=10, period=60)  # 限制每个用户每分钟最多删除10个模型
-def delete(model_id):
+def delete_model(model_id):
     start_time = time.time()  # 记录操作开始时间
 
     # 创建一个新的操作记录
@@ -230,14 +230,14 @@ def delete(model_id):
     current_user = User.query.get(current_user_id)
 
     # 获取指定模型
-    model = Model.query.get(model_id)
+    deleted_model = Model.query.get(model_id)
 
     # 校验字段
     validation_checks = [
-        (not model, f"【删除模型 ID={model_id} 失败】该模型不存在", 404),
-        (model and current_user.role != UserRole.DEVELOPER,
+        (not deleted_model, f"【删除模型 ID={model_id} 失败】该模型不存在", 404),
+        (deleted_model and current_user.role != UserRole.DEVELOPER,
          f"【删除模型 ID={model_id} 失败】您非开发人员，权限不足", 403),
-        (model and Detection.query.filter_by(model_id=model_id).first(),
+        (deleted_model and Detection.query.filter_by(model_id=model_id).first(),
          f"【删除模型 ID={model_id} 失败】该模型存在关联的检测分割记录，无法删除", 400),
     ]
     for condition, message, code in validation_checks:
@@ -247,20 +247,20 @@ def delete(model_id):
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 删除实际文件
-    file_abs_path = os.path.join(current_app.root_path, model.model_path)
+    file_abs_path = os.path.join(current_app.root_path, deleted_model.model_path)
     delete_file(file_abs_path)
 
     # 删除数据库记录
-    db.session.delete(model)
+    db.session.delete(deleted_model)
     db.session.commit()
 
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【删除模型 ID={model_id} 成功】deleted_model: {model.to_dict()}, operator: {current_user}")
+    current_app.logger.info(f"【删除模型 ID={model_id} 成功】deleted_model: {deleted_model.to_dict()}, operator: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
-        'deleted_model': model.to_dict(),
+        'deleted_model': deleted_model.to_dict(),
     }), 200
 
 
