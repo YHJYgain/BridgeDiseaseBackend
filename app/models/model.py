@@ -57,8 +57,8 @@ class Model(db.Model):
     mask_r = db.Column(db.Float, default=lambda: round(0.0, 3))  # 分割掩膜的召回率
     mask_mAP50 = db.Column(db.Float, default=lambda: round(0.0, 3))  # 分割掩膜在 IoU=0.5 时的 mAP
     mask_mAP50_95 = db.Column(db.Float, default=lambda: round(0.0, 3))  # 分割掩膜在 IoU 从 0.5 到 0.95 的 mAP
-    f1_score = db.Column(db.Float, default=lambda: round(0.0, 5))  # F1 分数
-    fitness_score = db.Column(db.Float, default=lambda: round(0.0, 5))  # 适应度分数
+    f1_score = db.Column(db.Float, default=lambda: round(0.0, 5), nullable=False)  # F1 分数
+    fitness_score = db.Column(db.Float, default=lambda: round(0.0, 5), nullable=False)  # 适应度分数
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 创建时间
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")),
                            onupdate=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 最后更新时间

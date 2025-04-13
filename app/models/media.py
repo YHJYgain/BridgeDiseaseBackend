@@ -39,7 +39,7 @@ class Media(db.Model):
     file_type = db.Column(db.String(50), nullable=False)  # 文件类型（图片或视频）
     resolution_width = db.Column(db.Integer, default=0)  # 分辨率宽度
     resolution_height = db.Column(db.Integer, default=0)  # 分辨率高度
-    frame_count = db.Column(db.Integer, default=1)  # 帧数（图片为 1，视频为实际帧数）
+    frame_count = db.Column(db.Integer, default=1, nullable=False)  # 帧数（图片为 1，视频为实际帧数）
     upload_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 上传时间
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")),
                            onupdate=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))  # 最后更新时间

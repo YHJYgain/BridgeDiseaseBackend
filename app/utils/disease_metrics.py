@@ -12,14 +12,14 @@ def compute_count(masks):
 
 
 def compute_perimeter(masks):
-    """计算病害总周长（通用）"""
+    """计算病害周长（通用）"""
     contours, _ = cv2.findContours(masks, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     total_perimeter = sum(cv2.arcLength(cnt, closed=True) for cnt in contours)
     return float(total_perimeter)
 
 
 def compute_area(masks):
-    """计算病害总面积（通用）"""
+    """计算病害面积（通用）"""
     return float(np.sum(masks))
 
 
@@ -96,13 +96,13 @@ def evaluate_disease_severity(disease_count, disease_perimeter, disease_area, sh
         if disease_area else 0
     max_disease_perimeter = float((2 * (media.resolution_width + media.resolution_height)))
     max_disease_area = float(media.resolution_width * media.resolution_height)
-    max_crack_width = float(min(media.resolution_width, media.resolution_height) / scale_factor)
+    max_crack_width = float(min(media.resolution_width, media.resolution_height) * scale_factor)
     min_max_values = {
         'disease_count': (0, max_disease_count),
         'disease_perimeter': (0.0, max_disease_perimeter),
         'disease_area': (0.0, max_disease_area),
         'shape_complexity': (0.0, 1.0),
-        'texture_roughness': (0.0, 65025.0),
+        'texture_roughness': (0.0, 1020.0),
         'crack_width': (0.0, max_crack_width),
         'avg_hue': (0.0, 179.0)
     }
