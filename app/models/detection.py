@@ -42,7 +42,7 @@ class Detection(db.Model):
     __tablename__ = 'detection'
 
     detection_id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 检测分割记录 ID
-    result_path = db.Column(db.String(255), nullable=False)  # 检测分割结果路径
+    result_path = db.Column(db.String(255))  # 检测分割结果路径
     disease_count = db.Column(db.Integer, default=0)  # 病害数量
     disease_perimeter = db.Column(db.Float, default=0.0)  # 病害周长
     disease_area = db.Column(db.Float, default=0.0)  # 病害面积
