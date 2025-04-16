@@ -36,7 +36,7 @@
 1. 克隆项目到本地
 
 ```bash
-git clone git@github.com:YHJYgain/bridge-disease-frontend.git
+git clone https://github.com/YHJYgain/BridgeDiseaseBackend.git
 cd BridgeDiseaseBackend
 ```
 
