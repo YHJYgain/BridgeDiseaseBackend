@@ -27,6 +27,7 @@ class User(db.Model):
         status (str): 用户的状态，使用枚举类型（'active', 'inactive', 'banned'），默认是 'active'。
         created_at (datetime): 用户记录的创建时间，自动生成。
         updated_at (datetime): 用户记录的最后更新时间，自动更新。
+        deleted_at (datetime): 用户记录的注销时间（可选）。
 
     Relationships:
         models (Model): 一个用户可以拥有多个模型（反向关系，表示用户的模型）。

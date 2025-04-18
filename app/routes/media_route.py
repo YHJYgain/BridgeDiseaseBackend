@@ -16,7 +16,6 @@ from app.utils import handle_operation_failure, allowed_image_file, handle_file_
 @media_routes.route('/upload', methods=['POST'])
 @jwt_required()
 @login_required
-@user_rate_limit(limit=5, period=60)  # 限制每个用户每分钟最多上传 5 个媒体
 def upload():
     start_time = time.time()  # 记录操作开始时间
 
@@ -156,7 +155,7 @@ def update(media_id):
             return jsonify({'operation': new_operation.to_dict()}), code
 
     # 更新媒体信息
-    updated_media.description = description
+    updated_media.description = description if description else updated_media.description
     db.session.commit()
 
     # 记录操作
@@ -173,7 +172,6 @@ def update(media_id):
 @media_routes.route('/delete/<int:media_id>', methods=['DELETE'])
 @jwt_required()
 @login_required
-@user_rate_limit(limit=10, period=60)  # 限制每个用户每分钟最多删除 10 个媒体
 def delete_media(media_id):
     start_time = time.time()  # 记录操作开始时间
 

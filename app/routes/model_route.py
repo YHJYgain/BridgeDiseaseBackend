@@ -16,7 +16,6 @@ from app.utils import handle_operation_failure, allowed_model_file, handle_file_
 @model_routes.route('/upload', methods=['POST'])
 @jwt_required()
 @login_required
-@user_rate_limit(limit=5, period=60)  # 限制每个用户每分钟最多上传5个模型
 def upload():
     start_time = time.time()  # 记录操作开始时间
 
@@ -134,26 +133,25 @@ def detail(model_id):
 @model_routes.route('/update/<int:model_id>', methods=['PUT'])
 @jwt_required()
 @login_required
-@user_rate_limit(limit=10, period=60)  # 限制每个用户每分钟最多更新10个模型
 def update(model_id):
     start_time = time.time()  # 记录操作开始时间
 
     # 获取请求中的表单数据
     disease_category = request.form.get('disease_category')
-    augmentation = request.form.get('augmentation', '原图')
-    layers = int(request.form.get('layers'))
-    parameters = int(request.form.get('parameters'))
-    GFLOPs = float(request.form.get('GFLOPs'))
-    box_p = float(request.form.get('box_p', 0.0))
-    box_r = float(request.form.get('box_r', 0.0))
-    box_mAP50 = float(request.form.get('box_mAP50', 0.0))
-    box_mAP50_95 = float(request.form.get('box_mAP50_95', 0.0))
-    mask_p = float(request.form.get('mask_p', 0.0))
-    mask_r = float(request.form.get('mask_r', 0.0))
-    mask_mAP50 = float(request.form.get('mask_mAP50', 0.0))
-    mask_mAP50_95 = float(request.form.get('mask_mAP50_95', 0.0))
-    f1_score = float(request.form.get('f1_score', 0.0))
-    fitness_score = float(request.form.get('fitness_score', 0.0))
+    augmentation = request.form.get('augmentation')
+    layers = int(request.form.get('layers') or 0)
+    parameters = int(request.form.get('parameters') or 0)
+    GFLOPs = float(request.form.get('GFLOPs') or 0.0)
+    box_p = float(request.form.get('box_p') or 0.0)
+    box_r = float(request.form.get('box_r') or 0.0)
+    box_mAP50 = float(request.form.get('box_mAP50') or 0.0)
+    box_mAP50_95 = float(request.form.get('box_mAP50_95') or 0.0)
+    mask_p = float(request.form.get('mask_p') or 0.0)
+    mask_r = float(request.form.get('mask_r') or 0.0)
+    mask_mAP50 = float(request.form.get('mask_mAP50') or 0.0)
+    mask_mAP50_95 = float(request.form.get('mask_mAP50_95') or 0.0)
+    f1_score = float(request.form.get('f1_score') or 0.0)
+    fitness_score = float(request.form.get('fitness_score') or 0.0)
 
     # 创建一个新的操作记录
     new_operation = Operation(
@@ -172,6 +170,7 @@ def update(model_id):
 
     # 校验字段
     validation_checks = [
+        (not disease_category, f"【更新模型 ID={model_id} 信息失败】病害类别为空", 400),
         (not updated_model, f"【更新模型 ID={model_id} 信息失败】该模型不存在", 404),
         (updated_model and current_user.role != UserRole.DEVELOPER,
          f"【更新模型 ID={model_id} 信息失败】您非开发人员，权限不足", 403),
@@ -184,20 +183,20 @@ def update(model_id):
 
     # 更新模型文件信息
     updated_model.disease_category = disease_category
-    updated_model.augmentation = augmentation
+    updated_model.augmentation = augmentation if augmentation else updated_model.augmentation
     updated_model.layers = layers
     updated_model.parameters = parameters
     updated_model.GFLOPs = GFLOPs
-    updated_model.box_p = box_p
-    updated_model.box_r = box_r
-    updated_model.box_mAP50 = box_mAP50
-    updated_model.box_mAP50_95 = box_mAP50_95
-    updated_model.mask_p = mask_p
-    updated_model.mask_r = mask_r
-    updated_model.mask_mAP50 = mask_mAP50
-    updated_model.mask_mAP50_95 = mask_mAP50_95
-    updated_model.f1_score = f1_score
-    updated_model.fitness_score = fitness_score
+    updated_model.box_p = box_p if box_p else updated_model.box_p
+    updated_model.box_r = box_r if box_r else updated_model.box_r
+    updated_model.box_mAP50 = box_mAP50 if box_mAP50 else updated_model.box_mAP50
+    updated_model.box_mAP50_95 = box_mAP50_95 if box_mAP50_95 else updated_model.box_mAP50_95
+    updated_model.mask_p = mask_p if mask_p else updated_model.mask_p
+    updated_model.mask_r = mask_r if mask_r else updated_model.mask_r
+    updated_model.mask_mAP50 = mask_mAP50 if mask_mAP50 else updated_model.mask_mAP50
+    updated_model.mask_mAP50_95 = mask_mAP50_95 if mask_mAP50_95 else updated_model.mask_mAP50_95
+    updated_model.f1_score = f1_score if f1_score else updated_model.f1_score
+    updated_model.fitness_score = fitness_score if fitness_score else updated_model.fitness_score
     db.session.commit()
 
     # 记录操作
@@ -213,7 +212,6 @@ def update(model_id):
 @model_routes.route('/delete/<int:model_id>', methods=['DELETE'])
 @jwt_required()
 @login_required
-@user_rate_limit(limit=10, period=60)  # 限制每个用户每分钟最多删除10个模型
 def delete_model(model_id):
     start_time = time.time()  # 记录操作开始时间
 
@@ -257,7 +255,8 @@ def delete_model(model_id):
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【删除模型 ID={model_id} 成功】deleted_model: {deleted_model.to_dict()}, operator: {current_user}")
+    current_app.logger.info(
+        f"【删除模型 ID={model_id} 成功】deleted_model: {deleted_model.to_dict()}, operator: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'deleted_model': deleted_model.to_dict(),

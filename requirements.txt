@@ -6,7 +6,12 @@ moviepy
 numpy
 opencv_python
 Pillow
+pytest
+pytest-cov
 skimage
 SQLAlchemy
+torch
+torchvision
+torchaudio
 ultralytics
 Werkzeug

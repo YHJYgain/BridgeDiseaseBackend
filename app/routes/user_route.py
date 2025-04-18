@@ -17,7 +17,6 @@ from app.utils import is_valid_email, is_valid_avatar_file, is_valid_phone, hand
 
 
 @user_routes.route('/register', methods=['POST'])
-@rate_limit(key_func='ip', limit=5, period=60)  # 限制同一 IP 每分钟最多 5 次注册请求
 def register():
     start_time = time.time()  # 记录操作开始时间
 
@@ -86,7 +85,6 @@ def register():
 
 
 @user_routes.route('/login', methods=['POST'])
-@rate_limit(key_func='ip', limit=5, period=60)  # 限制同一 IP 每分钟最多 5 次登录请求
 def login():
     start_time = time.time()  # 记录操作开始时间
 
@@ -178,7 +176,6 @@ def logout():
 
 @user_routes.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
-@rate_limit(key_func='ip', limit=10, period=60)  # 限制同一 IP 每分钟最多 10 次刷新 token 请求
 def refresh():
     start_time = time.time()  # 记录操作开始时间
 
@@ -296,11 +293,11 @@ def update():
     # 更新用户信息
     current_user.username = username
     current_user.email = email
-    current_user.first_name = first_name
-    current_user.last_name = last_name
+    current_user.first_name = first_name if first_name else current_user.first_name
+    current_user.last_name = last_name if last_name else current_user.last_name
     if avatar_file:  # 如果有头像文件，则上传并更新头像路径；如果没有，则说明用户不需要更新头像
         current_user.avatar_path = handle_file_upload(avatar_file, 'avatars')
-    current_user.phone = phone
+    current_user.phone = phone if phone else current_user.phone
     db.session.commit()
 
     # 记录操作
@@ -372,12 +369,12 @@ def update_user(user_id):
     updated_user.email = email
     if password:  # 如果有密码，则更新密码；如果没有，则说明用户不需要更新密码
         updated_user.password = generate_password_hash(password)
-    updated_user.first_name = first_name
-    updated_user.last_name = last_name
+    updated_user.first_name = first_name if first_name else updated_user.first_name
+    updated_user.last_name = last_name if last_name else updated_user.last_name
     updated_user.role = UserRole(role.lower())
     if avatar_file:  # 如果有头像文件，则上传并更新头像路径；如果没有，则说明用户不需要更新头像
         updated_user.avatar_path = handle_file_upload(avatar_file, 'avatars')
-    updated_user.phone = phone
+    updated_user.phone = phone if phone else updated_user.phone
     db.session.commit()
 
     # 记录操作
@@ -393,7 +390,6 @@ def update_user(user_id):
 @user_routes.route('/change_password', methods=['PUT'])
 @jwt_required()
 @login_required
-@user_rate_limit(limit=3, period=60)  # 限制每个用户每分钟最多 3 次修改密码请求
 def change_password():
     start_time = time.time()  # 记录操作开始时间
 
@@ -442,7 +438,6 @@ def change_password():
 @user_routes.route('/delete', methods=['DELETE'])
 @jwt_required()
 @login_required
-@user_rate_limit(limit=2, period=60)  # 限制每个用户每分钟最多 2 次注销账号请求
 def delete():
     start_time = time.time()  # 记录操作开始时间
 
@@ -476,7 +471,6 @@ def delete():
 @user_routes.route('/delete/<int:user_id>', methods=['DELETE'])
 @jwt_required()
 @login_required
-@user_rate_limit(limit=2, period=60)  # 限制每个用户每分钟最多 2 次注销账号请求
 def delete_user(user_id):
     start_time = time.time()  # 记录操作开始时间
 
@@ -530,7 +524,6 @@ def delete_user(user_id):
 @user_routes.route('/undelete/<int:user_id>', methods=['PUT'])
 @jwt_required()
 @login_required
-@user_rate_limit(limit=2, period=60)  # 限制每个用户每分钟最多 2 次恢复注销账号请求
 def undelete_user(user_id):
     start_time = time.time()  # 记录操作开始时间
 
@@ -585,7 +578,6 @@ def undelete_user(user_id):
 @user_routes.route('/ban/<int:user_id>', methods=['PUT'])
 @jwt_required()
 @login_required
-@user_rate_limit(limit=3, period=60)  # 限制每个用户每分钟最多 3 次封禁用户请求
 def ban(user_id):
     start_time = time.time()  # 记录操作开始时间
 
@@ -638,7 +630,6 @@ def ban(user_id):
 @user_routes.route('/unban/<int:user_id>', methods=['PUT'])
 @jwt_required()
 @login_required
-@user_rate_limit(limit=3, period=60)  # 限制每个用户每分钟最多 3 次解禁用户请求
 def unban(user_id):
     start_time = time.time()  # 记录操作开始时间
 

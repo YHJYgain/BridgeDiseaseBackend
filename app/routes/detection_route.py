@@ -1,12 +1,16 @@
+import base64
+import json
 import os
 import time
 import traceback
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import numpy as np
-from flask import jsonify, request, current_app
+from PIL import Image
+from flask import jsonify, request, current_app, Response, stream_with_context
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ultralytics import YOLO
 
@@ -18,7 +22,7 @@ from app.routes import detection_routes
 from app.utils import handle_operation_success, handle_operation_failure, compute_count, compute_perimeter, \
     compute_area, compute_shape_complexity, compute_texture_roughness, compute_crack_width, compute_avg_hue, \
     evaluate_disease_severity, get_pagination_params, adjust_page_if_needed, unify_result_media_format, delete_file, \
-    user_rate_limit
+    user_rate_limit, DateTimeEncoder
 
 # 获取文件夹配置，并确保目录存在
 MODELS_FOLDER = Config.MODELS_FOLDER
@@ -32,7 +36,6 @@ os.makedirs(RESULTS_FOLDER, exist_ok=True)
 @detection_routes.route('/detection_segmentation', methods=['POST'])
 @jwt_required()
 @login_required
-@user_rate_limit(limit=10, period=60)  # 限制每个用户每分钟最多执行 10 次检测分割
 def detection_segmentation():
     start_time = time.time()  # 记录操作开始时间
 
@@ -109,110 +112,136 @@ def detection_segmentation():
             exist_ok=True,  # 每次都保存在同一文件夹
         )
 
-        # 初始化媒体帧数
-        frame_count = media.frame_count
-        disease_frame_count = frame_count
+        def generate():
+            # 初始化媒体帧数
+            frame_count = media.frame_count
+            disease_frame_count = frame_count
 
-        # 初始化病害指标
-        total_disease_count = 0
-        total_disease_perimeter = 0.0
-        total_disease_area = 0.0
-        total_shape_complexity = 0.0
-        total_texture_roughness = 0.0
-        total_crack_width = 0.0
-        total_avg_hue = 0.0
+            # 初始化病害指标
+            total_disease_count = 0
+            total_disease_perimeter = 0.0
+            total_disease_area = 0.0
+            total_shape_complexity = 0.0
+            total_texture_roughness = 0.0
+            total_crack_width = 0.0
+            total_avg_hue = 0.0
 
-        # 初始化检测分割耗时
-        total_detection_duration = 0.0
+            # 初始化检测分割耗时
+            total_detection_duration = 0.0
 
-        for result in results:
-            # 当前帧检测分割耗时
-            frame_detection_duration = sum(result.speed.values())
+            # 初始消息
+            init_msg = {
+                'type': 'START',
+                'existing_detection': bool(existing_detection),
+            }
+            yield json.dumps(init_msg, cls=DateTimeEncoder) + '\n'
 
-            # 累计检测分割耗时
-            total_detection_duration += frame_detection_duration
+            for idx, result in enumerate(results):
+                # 计算帧检测时长
+                frame_detection_duration = sum(result.speed.values())
+                total_detection_duration += frame_detection_duration
 
-            # 如果 masks 为空，则说明没有检测分割到病害，跳过该帧
-            if result.masks is None:
-                disease_frame_count = max(disease_frame_count - 1, 0)
-                continue
+                # 统计帧级指标
+                if result.masks is None:
+                    disease_frame_count = max(disease_frame_count - 1, 0)
+                else:
+                    masks = result.masks
+                    masks_data = masks.data.cpu().numpy()  # 确保在 CPU 上
+                    combined_masks = np.any(masks_data, axis=0).astype(np.uint8)  # 确保重复区域只计算一次
 
-            # 获取所有 masks 并合并
-            masks = result.masks
-            masks_data = masks.data.cpu().numpy()  # 确保在 CPU 上
-            combined_masks = np.any(masks_data, axis=0).astype(np.uint8)  # 确保重复区域只计算一次
+                    frame_disease_count = compute_count(masks)  # 病害数量
+                    frame_disease_perimeter = compute_perimeter(combined_masks)  # 病害周长（像素）
+                    frame_disease_area = compute_area(combined_masks)  # 病害面积（像素）
+                    frame_shape_complexity = compute_shape_complexity(frame_disease_perimeter,
+                                                                      frame_disease_area)  # 形状复杂度
+                    frame_texture_roughness = compute_texture_roughness(combined_masks)  # 纹理粗糙度
+                    frame_crack_width = compute_crack_width(
+                        combined_masks) if "裂缝" in model.disease_category else 0.0  # 裂缝宽度
+                    frame_avg_hue = compute_avg_hue(combined_masks,
+                                                    result.orig_img) if "锈蚀" in model.disease_category else 0.0  # 平均色调
 
-            # 计算当前帧的病害指标
-            frame_disease_count = compute_count(masks)  # 病害数量
-            frame_disease_perimeter = compute_perimeter(combined_masks)  # 病害周长（像素）
-            frame_disease_area = compute_area(combined_masks)  # 病害面积（像素）
-            frame_shape_complexity = compute_shape_complexity(frame_disease_perimeter, frame_disease_area)  # 形状复杂度
-            frame_texture_roughness = compute_texture_roughness(combined_masks)  # 纹理粗糙度
-            frame_crack_width = compute_crack_width(combined_masks) if "裂缝" in model.disease_category else 0.0  # 裂缝宽度
-            frame_avg_hue = compute_avg_hue(combined_masks,
-                                            result.orig_img) if "锈蚀" in model.disease_category else 0.0  # 平均色调
+                    total_disease_count += frame_disease_count
+                    total_disease_perimeter += frame_disease_perimeter
+                    total_disease_area += frame_disease_area
+                    total_shape_complexity += frame_shape_complexity
+                    total_texture_roughness += frame_texture_roughness
+                    total_crack_width += frame_crack_width
+                    total_avg_hue += frame_avg_hue
 
-            # 累计病害指标
-            total_disease_count += frame_disease_count
-            total_disease_perimeter += frame_disease_perimeter
-            total_disease_area += frame_disease_area
-            total_shape_complexity += frame_shape_complexity
-            total_texture_roughness += frame_texture_roughness
-            total_crack_width += frame_crack_width
-            total_avg_hue += frame_avg_hue
+                # 绘制并编码图像
+                annotated_img = result.plot()  # ndarray
+                annotated_pil = Image.fromarray(annotated_img)  # 转为 PIL.Image
+                buf = BytesIO()
+                annotated_pil.save(buf, format='JPEG')  # 正确保存
+                b64 = base64.b64encode(buf.getvalue()).decode('ascii')  # 编码为 base64 字符串
 
-        current_app.logger.debug(f"【检测分割中】病害帧数: {disease_frame_count}")
+                frame_msg = {
+                    'type': 'FRAME',
+                    'frame_index': idx,
+                    'frame_image': b64,
+                    'frame_detection_duration': frame_detection_duration,
+                }
+                yield json.dumps(frame_msg, cls=DateTimeEncoder) + '\n'
 
-        # 计算平均病害指标
-        average_disease_count = total_disease_count // disease_frame_count if disease_frame_count != 0 else 0
-        average_disease_perimeter = total_disease_perimeter / disease_frame_count if disease_frame_count != 0 else 0.0
-        average_disease_area = total_disease_area / disease_frame_count if disease_frame_count != 0 else 0.0
-        average_shape_complexity = total_shape_complexity / disease_frame_count if disease_frame_count != 0 else 0.0
-        average_texture_roughness = total_texture_roughness / disease_frame_count if disease_frame_count != 0 else 0.0
-        average_crack_width = total_crack_width / disease_frame_count if disease_frame_count != 0 else 0.0
-        average_avg_hue = total_avg_hue / disease_frame_count if disease_frame_count != 0 else 0.0
+            current_app.logger.info(
+                f"【检测分割】total_disease_count: {total_disease_count}, disease_frame_count: {disease_frame_count}")
 
-        # 计算帧平均检测分割耗时
-        avg_frame_detection_duration = total_detection_duration / frame_count if frame_count != 0 else 0.0
+            # 计算平均病害指标
+            average_disease_count = total_disease_count // disease_frame_count if disease_frame_count != 0 else 0
+            average_disease_perimeter = total_disease_perimeter / disease_frame_count if disease_frame_count != 0 else 0.0
+            average_disease_area = total_disease_area / disease_frame_count if disease_frame_count != 0 else 0.0
+            average_shape_complexity = total_shape_complexity / disease_frame_count if disease_frame_count != 0 else 0.0
+            average_texture_roughness = total_texture_roughness / disease_frame_count if disease_frame_count != 0 else 0.0
+            average_crack_width = total_crack_width / disease_frame_count if disease_frame_count != 0 else 0.0
+            average_avg_hue = total_avg_hue / disease_frame_count if disease_frame_count != 0 else 0.0
 
-        # 根据检测结果计算病害严重性得分、病害等级、病害描述
-        disease_severity_score, disease_grade, disease_description = evaluate_disease_severity(average_disease_count,
-                                                                                               average_disease_perimeter,
-                                                                                               average_disease_area,
-                                                                                               average_shape_complexity,
-                                                                                               average_texture_roughness,
-                                                                                               average_crack_width,
-                                                                                               average_avg_hue, media)
+            # 计算帧平均检测分割耗时
+            avg_frame_detection_duration = total_detection_duration / frame_count if frame_count != 0 else 0.0
 
-        # 检测分割结果路径
-        result_path = unify_result_media_format(media, current_user)
+            # 根据检测结果计算病害严重性得分、病害等级、病害描述
+            disease_severity_score, disease_grade, disease_description = evaluate_disease_severity(
+                average_disease_count,
+                average_disease_perimeter,
+                average_disease_area,
+                average_shape_complexity,
+                average_texture_roughness,
+                average_crack_width,
+                average_avg_hue, media)
 
-        # 更新检测分割信息
-        new_detection.status = TaskStatus.COMPLETED
-        new_detection.result_path = result_path
-        new_detection.disease_count = average_disease_count
-        new_detection.disease_perimeter = average_disease_perimeter
-        new_detection.disease_area = average_disease_area
-        new_detection.shape_complexity = average_shape_complexity
-        new_detection.texture_roughness = average_texture_roughness
-        new_detection.crack_width = average_crack_width
-        new_detection.avg_hue = average_avg_hue
-        new_detection.disease_severity_score = disease_severity_score
-        new_detection.disease_grade = disease_grade
-        new_detection.disease_description = disease_description
-        new_detection.detection_duration = total_detection_duration
-        new_detection.avg_frame_detection_duration = avg_frame_detection_duration
-        db.session.commit()
+            # 检测分割结果路径
+            result_path = unify_result_media_format(media, current_user)
 
-        # 记录操作
-        new_operation = handle_operation_success(new_operation, start_time, current_user_id)
+            # 更新检测分割信息
+            new_detection.status = TaskStatus.COMPLETED
+            new_detection.result_path = result_path
+            new_detection.disease_count = average_disease_count
+            new_detection.disease_perimeter = average_disease_perimeter
+            new_detection.disease_area = average_disease_area
+            new_detection.shape_complexity = average_shape_complexity
+            new_detection.texture_roughness = average_texture_roughness
+            new_detection.crack_width = average_crack_width
+            new_detection.avg_hue = average_avg_hue
+            new_detection.disease_severity_score = disease_severity_score
+            new_detection.disease_grade = disease_grade
+            new_detection.disease_description = disease_description
+            new_detection.detection_duration = total_detection_duration
+            new_detection.avg_frame_detection_duration = avg_frame_detection_duration
+            db.session.commit()
 
-        current_app.logger.info(f"【检测分割成功】new_detection: {new_detection}")
-        return jsonify({
-            'operation': new_operation.to_dict(),
-            'new_detection': new_detection.to_dict(),
-            'is_new_detection': not bool(existing_detection),
-        }), 200
+            # 记录操作
+            success_op = handle_operation_success(new_operation, start_time, current_user_id)
+
+            end_msg = {
+                'type': 'END',
+                'existing_detection': bool(existing_detection),
+                'new_detection': new_detection.to_dict(),
+                'operation': success_op.to_dict(),
+            }
+
+            current_app.logger.info(f"【检测分割成功】new_detection: {success_op}")
+            yield json.dumps(end_msg, cls=DateTimeEncoder) + '\n'
+
+        return Response(stream_with_context(generate()), mimetype='application/json')
     except Exception as error:
         # 发生错误，更新任务状态为失败
         new_detection.status = TaskStatus.FAILED
@@ -269,7 +298,6 @@ def detail(detection_id):
 @detection_routes.route('/delete/<int:detection_id>', methods=['GET'])
 @jwt_required()
 @login_required
-@user_rate_limit(limit=10, period=60)  # 限制每个用户每分钟最多删除 10 个检测记录
 def delete_detection(detection_id):
     start_time = time.time()  # 记录操作开始时间
 
