@@ -117,14 +117,23 @@ def all_operations():
             return jsonify({'failure_message': message}), code
 
     # 获取所有操作
-    query = Operation.query
+    query = (
+        Operation.query
+        .join(User, Operation.operator_id == User.user_id)
+        .add_columns(User.username.label('operator_username'))
+    )
     page, operations_total, pages = adjust_page_if_needed(query, page, per_page)
-    operations = query.paginate(page=page, per_page=per_page, error_out=False)
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+    operations = []
+    for operation, operator_username in paginated.items:
+        op = operation.to_dict()
+        op.update({'operator_username': operator_username})
+        operations.append(op)
 
     current_app.logger.info(
-        f"【获取所有操作成功】total: {operations_total}, per_page: {per_page}, page: {page}, pages: {pages}, operations: {[operation.to_dict() for operation in operations]}, operator: {current_user}")
+        f"【获取所有操作成功】total: {operations_total}, per_page: {per_page}, page: {page}, pages: {pages}, operations: {operations}, operator: {current_user}")
     return jsonify({
-        'operations': [operation.to_dict() for operation in operations],
+        'operations': operations,
         'total': operations_total,
         'per_page': per_page,
         'page': page,

@@ -376,14 +376,36 @@ def user_detections(user_id):
             return jsonify({'failure_message': message}), code
 
     # 获取指定用户检测分割记录
-    query = Detection.query.filter_by(owner_id=user_id)
+    query = (
+        Detection.query
+        .filter(Detection.owner_id == user_id)
+        .join(Model, Detection.model_id == Model.model_id)
+        .join(Media, Detection.media_id == Media.media_id)
+        .join(User, Detection.owner_id == User.user_id)
+        .add_columns(
+            Model.model_name.label('model_name'),
+            Media.media_name.label('media_name'),
+            Media.file_type.label('media_type'),
+            User.username.label('owner_username'),
+        )
+    )
     page, detections_total, pages = adjust_page_if_needed(query, page, per_page)
-    detections = query.paginate(page=page, per_page=per_page, error_out=False)
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+    detections = []
+    for detection, model_name, media_name, media_type, owner_username in paginated.items:
+        d = detection.to_dict()
+        d.update({
+            'model_name': model_name,
+            'media_name': media_name,
+            'media_type': media_type,
+            'owner_username': owner_username,
+        })
+        detections.append(d)
 
     current_app.logger.info(
-        f"【获取用户 ID={user_id} 检测分割记录成功】total: {detections_total}, per_page: {per_page}, page: {page}, pages: {pages}, detections: {[detection.to_dict() for detection in detections]}, operator: {current_user}")
+        f"【获取用户 ID={user_id} 检测分割记录成功】total: {detections_total}, per_page: {per_page}, page: {page}, pages: {pages}, detections: {detections}, operator: {current_user}")
     return jsonify({
-        'detections': [detection.to_dict() for detection in detections],
+        'detections': detections,
         'total': detections_total,
         'per_page': per_page,
         'page': page,
@@ -410,14 +432,35 @@ def all_detections():
         return jsonify({'failure_message': failure_message}), 403
 
     # 获取所有媒体
-    query = Detection.query
+    query = (
+        Detection.query
+        .join(Model, Detection.model_id == Model.model_id)
+        .join(Media, Detection.media_id == Media.media_id)
+        .join(User, Detection.owner_id == User.user_id)
+        .add_columns(
+            Model.model_name.label('model_name'),
+            Media.media_name.label('media_name'),
+            Media.file_type.label('media_type'),
+            User.username.label('owner_username'),
+        )
+    )
     page, detections_total, pages = adjust_page_if_needed(query, page, per_page)
-    detections = query.paginate(page=page, per_page=per_page, error_out=False)
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+    detections = []
+    for detection, model_name, media_name, media_type, owner_username in paginated.items:
+        d = detection.to_dict()
+        d.update({
+            'model_name': model_name,
+            'media_name': media_name,
+            'media_type': media_type,
+            'owner_username': owner_username,
+        })
+        detections.append(d)
 
     current_app.logger.info(
-        f"【获取所有检测分割记录成功】total: {detections_total}, per_page: {per_page}, page: {page}, pages: {pages}, detections: {[detection.to_dict() for detection in detections]}, operator: {current_user}")
+        f"【获取所有检测分割记录成功】total: {detections_total}, per_page: {per_page}, page: {page}, pages: {pages}, detections: {detections}, operator: {current_user}")
     return jsonify({
-        'detections': [detection.to_dict() for detection in detections],
+        'detections': detections,
         'total': detections_total,
         'per_page': per_page,
         'page': page,

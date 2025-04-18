@@ -251,14 +251,24 @@ def user_medias(user_id):
             return jsonify({'failure_message': message}), code
 
     # 获取指定用户媒体
-    query = Media.query.filter_by(owner_id=user_id)
+    query = (
+        Media.query
+        .filter(Media.owner_id == user_id)
+        .join(User, Media.owner_id == User.user_id)
+        .add_columns(User.username.label('owner_username'))
+    )
     page, medias_total, pages = adjust_page_if_needed(query, page, per_page)
-    medias = query.paginate(page=page, per_page=per_page, error_out=False)
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+    medias = []
+    for media, owner_username in paginated.items:
+        m = media.to_dict()
+        m.update({'owner_username': owner_username})
+        medias.append(m)
 
     current_app.logger.info(
-        f"【获取用户 ID={user_id} 媒体成功】total: {medias_total}, per_page: {per_page}, page: {page}, pages: {pages}, medias: {[media.to_dict() for media in medias]}, operator: {current_user}")
+        f"【获取用户 ID={user_id} 媒体成功】total: {medias_total}, per_page: {per_page}, page: {page}, pages: {pages}, medias: {medias}, operator: {current_user}")
     return jsonify({
-        'medias': [media.to_dict() for media in medias],
+        'medias': medias,
         'total': medias_total,
         'per_page': per_page,
         'page': page,
@@ -285,14 +295,23 @@ def all_medias():
         return jsonify({'failure_message': failure_message}), 403
 
     # 获取所有媒体
-    query = Media.query
+    query = (
+        Media.query
+        .join(User, Media.owner_id == User.user_id)
+        .add_columns(User.username.label('owner_username'))
+    )
     page, medias_total, pages = adjust_page_if_needed(query, page, per_page)
-    medias = query.paginate(page=page, per_page=per_page, error_out=False)
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+    medias = []
+    for media, owner_username in paginated.items:
+        m = media.to_dict()
+        m.update({'owner_username': owner_username})
+        medias.append(m)
 
     current_app.logger.info(
-        f"【获取所有媒体成功】total: {medias_total}, per_page: {per_page}, page: {page}, pages: {pages}, medias: {[media.to_dict() for media in medias]}, operator: {current_user}")
+        f"【获取所有媒体成功】total: {medias_total}, per_page: {per_page}, page: {page}, pages: {pages}, medias: {medias}, operator: {current_user}")
     return jsonify({
-        'medias': [media.to_dict() for media in medias],
+        'medias': medias,
         'total': medias_total,
         'per_page': per_page,
         'page': page,

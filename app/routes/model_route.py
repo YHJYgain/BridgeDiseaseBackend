@@ -277,14 +277,24 @@ def all_models():
     current_user = User.query.get(current_user_id)
 
     # 获取所有模型文件
-    query = Model.query
+    query = (
+        Model.query
+        .join(User, Model.owner_id == User.user_id)
+        .add_columns(User.username.label('owner_username'))
+    )
     page, models_total, pages = adjust_page_if_needed(query, page, per_page)
-    models = query.paginate(page=page, per_page=per_page, error_out=False)
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    models = []
+    for model, owner_username in paginated.items:
+        m = model.to_dict()
+        m.update({'owner_username': owner_username})
+        models.append(m)
 
     current_app.logger.info(
-        f"【获取所有模型成功】total: {models_total}, per_page: {per_page}, page: {page}, pages: {pages}, models: {[model.to_dict() for model in models]}, operator: {current_user}")
+        f"【获取所有模型成功】total: {models_total}, per_page: {per_page}, page: {page}, pages: {pages}, models: {models}, operator: {current_user}")
     return jsonify({
-        'models': [model.to_dict() for model in models],
+        'models': models,
         'total': models_total,
         'per_page': per_page,
         'page': page,
