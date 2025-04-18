@@ -119,7 +119,7 @@ def all_operations():
     # 获取所有操作
     query = (
         Operation.query
-        .join(User, Operation.operator_id == User.user_id)
+        .join(User, Operation.owner_id == User.user_id)
         .add_columns(User.username.label('operator_username'))
     )
     page, operations_total, pages = adjust_page_if_needed(query, page, per_page)
