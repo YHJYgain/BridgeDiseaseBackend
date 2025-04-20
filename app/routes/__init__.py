@@ -6,6 +6,7 @@ model_routes = Blueprint('model', __name__, url_prefix='/model')
 media_routes = Blueprint('media', __name__, url_prefix='/media')
 detection_routes = Blueprint('detection', __name__, url_prefix='/detection')
 operation_routes = Blueprint('operation', __name__, url_prefix='/operation')
+file_routes = Blueprint('file', __name__, url_prefix='/file')
 
 
 def register_routes(app):
@@ -25,6 +26,7 @@ def register_routes(app):
     app.register_blueprint(media_routes)
     app.register_blueprint(detection_routes)
     app.register_blueprint(operation_routes)
+    app.register_blueprint(file_routes)
 
 
 from .user_route import *
@@ -32,3 +34,4 @@ from .model_route import *
 from .media_route import *
 from .detection_route import *
 from .operation_route import *
+from .file_route import *
