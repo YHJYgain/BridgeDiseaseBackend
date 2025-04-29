@@ -1,7 +1,7 @@
 # 桥梁病害检测系统传统ER图
 
 ```mermaid
-graph TD
+graph LR
     %% 实体定义 - 矩形
     USER[用户]
     MODEL[模型]
@@ -22,7 +22,6 @@ graph TD
     EMAIL((邮箱))
     PASSWORD((密码))
     ROLE((角色))
-    USER_STATUS((状态))
     
     %% 模型属性 - 椭圆
     MODEL_NAME((模型名称))
@@ -32,9 +31,7 @@ graph TD
     
     %% 媒体属性 - 椭圆
     MEDIA_NAME((媒体名称))
-    DESCRIPTION((媒体描述))
     FILE_TYPE((文件类型))
-    RESOLUTION((分辨率))
     FRAME_COUNT((帧数))
     
     %% 检测属性 - 椭圆
@@ -49,14 +46,12 @@ graph TD
     OPERATION_TYPE((操作类型))
     OP_DESCRIPTION((操作描述))
     DURATION((耗时))
-    OP_STATUS((操作状态))
     
     %% 实体与属性的连接
     USER --- USERNAME
     USER --- EMAIL
     USER --- PASSWORD
     USER --- ROLE
-    USER --- USER_STATUS
     
     MODEL --- MODEL_NAME
     MODEL --- DISEASE_CATEGORY
@@ -64,9 +59,7 @@ graph TD
     MODEL --- FITNESS_SCORE
     
     MEDIA --- MEDIA_NAME
-    MEDIA --- DESCRIPTION
     MEDIA --- FILE_TYPE
-    MEDIA --- RESOLUTION
     MEDIA --- FRAME_COUNT
     
     DETECTION --- DISEASE_SEVERITY_SCORE
@@ -79,7 +72,6 @@ graph TD
     OPERATION --- OPERATION_TYPE
     OPERATION --- OP_DESCRIPTION
     OPERATION --- DURATION
-    OPERATION --- OP_STATUS
     USER -->|1| OWNS1
     OWNS1 -->|n| MODEL
     USER -->|1| OWNS2
