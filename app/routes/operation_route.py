@@ -120,14 +120,14 @@ def all_operations():
     query = (
         Operation.query
         .join(User, Operation.owner_id == User.user_id)
-        .add_columns(User.username.label('operator_username'))
+        .add_columns(User.username.label('owner_username'))
     )
     page, operations_total, pages = adjust_page_if_needed(query, page, per_page)
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
     operations = []
-    for operation, operator_username in paginated.items:
+    for operation, owner_username in paginated.items:
         op = operation.to_dict()
-        op.update({'operator_username': operator_username})
+        op.update({'owner_username': owner_username})
         operations.append(op)
 
     current_app.logger.info(
