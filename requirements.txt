@@ -6,9 +6,7 @@ moviepy
 numpy
 opencv_python
 Pillow
-pytest
-pytest-cov
-skimage
+scikit-image
 SQLAlchemy
 torch
 torchvision
