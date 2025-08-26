@@ -292,7 +292,6 @@ def all_models():
     )
     page, models_total, pages = adjust_page_if_needed(query, page, per_page)
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
-
     models = []
     for model, owner_username in paginated.items:
         model_dict = model.to_dict()
