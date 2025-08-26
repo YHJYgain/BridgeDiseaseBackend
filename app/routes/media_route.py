@@ -266,6 +266,7 @@ def user_medias(user_id):
         .filter(Media.owner_id == user_id)
         .join(User, Media.owner_id == User.user_id)
         .add_columns(User.username.label('owner_username'))
+        .order_by(Media.media_id.asc())
     )
     page, medias_total, pages = adjust_page_if_needed(query, page, per_page)
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -311,6 +312,7 @@ def all_medias():
         Media.query
         .join(User, Media.owner_id == User.user_id)
         .add_columns(User.username.label('owner_username'))
+        .order_by(Media.media_id.asc())
     )
     page, medias_total, pages = adjust_page_if_needed(query, page, per_page)
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)

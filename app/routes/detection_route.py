@@ -456,6 +456,7 @@ def all_detections():
             Media.file_type.label('media_type'),
             User.username.label('owner_username'),
         )
+        .order_by(Detection.detection_id.asc())
     )
     page, detections_total, pages = adjust_page_if_needed(query, page, per_page)
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)

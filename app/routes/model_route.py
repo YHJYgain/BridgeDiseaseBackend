@@ -289,6 +289,7 @@ def all_models():
         Model.query
         .join(User, Model.owner_id == User.user_id)
         .add_columns(User.username.label('owner_username'))
+        .order_by(Model.model_id.asc())
     )
     page, models_total, pages = adjust_page_if_needed(query, page, per_page)
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)

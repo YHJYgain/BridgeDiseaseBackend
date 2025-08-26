@@ -720,7 +720,7 @@ def all_users():
         }), 403
 
     # 查询所有用户
-    query = User.query
+    query = User.query.order_by(User.user_id.asc())
     page, users_total, pages = adjust_page_if_needed(query, page, per_page)
     users = query.paginate(page=page, per_page=per_page, error_out=False)
 
