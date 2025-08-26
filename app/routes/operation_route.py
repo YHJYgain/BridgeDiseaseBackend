@@ -29,7 +29,9 @@ def detail(operation_id):
     for condition, message, code in validation_checks:
         if condition:
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'failure_message': message}), code
+            return jsonify({
+                'failure_message': message,
+            }), code
 
     return jsonify({
         'operation': operation.to_dict(),
@@ -56,7 +58,9 @@ def delete_operation(operation_id):
     for condition, message, code in validation_checks:
         if condition:
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'failure_message': message}), code
+            return jsonify({
+                'failure_message': message,
+            }), code
 
     # 删除操作日志
     db.session.delete(deleted_operation)
@@ -65,7 +69,7 @@ def delete_operation(operation_id):
     current_app.logger.info(
         f"【删除操作 ID={operation_id} 日志成功】deleted_operation: {deleted_operation}, operator: {current_user}")
     return jsonify({
-        'deleted_operation': deleted_operation.to_dict()
+        'deleted_operation': deleted_operation.to_dict(),
     }), 200
 
 
@@ -77,11 +81,17 @@ def clear():
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
 
-    # 校验用户权限
-    if current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER:
-        message = f"【清空操作日志失败】您非管理员/开发人员，权限不足"
-        current_app.logger.warning(message + f', operator: {current_user}')
-        return jsonify({'failure_message': message}), 403
+    # 校验字段
+    validation_checks = [
+        (current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER,
+         f"【清空操作日志失败】您非管理员/开发人员，权限不足", 403),
+    ]
+    for condition, message, code in validation_checks:
+        if condition:
+            current_app.logger.warning(message + f', operator: {current_user}')
+            return jsonify({
+                'failure_message': message,
+            }), code
 
     # 清空所有操作日志
     Operation.query.delete()
@@ -114,7 +124,9 @@ def all_operations():
     for condition, message, code in validation_checks:
         if condition:
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'failure_message': message}), code
+            return jsonify({
+                'failure_message': message,
+            }), code
 
     # 获取所有操作
     query = (

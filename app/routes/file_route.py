@@ -27,7 +27,9 @@ def serve_static(filepath):
 
 @file_routes.route('/static')
 def static():
-
+    """
+    静态文件路由
+    """
     current_app.logger.info(f'Serving static file')
     return jsonify({
         'operation': 'Serving static file',

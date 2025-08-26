@@ -67,7 +67,9 @@ def upload():
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'operation': new_operation.to_dict()}), code
+            return jsonify({
+                'operation': new_operation.to_dict(),
+            }), code
 
     # 保存文件到指定目录（返回相对路径）
     file_path = handle_file_upload(model_file, 'models')
@@ -123,7 +125,9 @@ def detail(model_id):
     for condition, message, code in validation_checks:
         if condition:
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'failure_message': message}), code
+            return jsonify({
+                'failure_message': message,
+            }), code
 
     return jsonify({
         'model': model.to_dict(),
@@ -179,7 +183,9 @@ def update(model_id):
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'operation': new_operation.to_dict()}), code
+            return jsonify({
+                'operation': new_operation.to_dict(),
+            }), code
 
     # 更新模型文件信息
     updated_model.disease_category = disease_category
@@ -242,7 +248,9 @@ def delete_model(model_id):
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'operation': new_operation.to_dict()}), code
+            return jsonify({
+                'operation': new_operation.to_dict(),
+            }), code
 
     # 删除实际文件
     file_abs_path = os.path.join(current_app.root_path, deleted_model.model_path)
@@ -311,7 +319,7 @@ def statistics():
 
     # 构建统计数据
     models_statistics = {
-        'total': total_models
+        'total': total_models,
     }
 
     return jsonify({

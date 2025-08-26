@@ -58,7 +58,9 @@ def register():
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message)
             current_app.logger.warning(message)
-            return jsonify({'operation': new_operation.to_dict()}), code
+            return jsonify({
+                'operation': new_operation.to_dict(),
+            }), code
 
     # 新用户，创建新记录
     user = User(
@@ -117,7 +119,9 @@ def login():
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, user_id)
             current_app.logger.warning(message)
-            return jsonify({'operation': new_operation.to_dict()}), code
+            return jsonify({
+                'operation': new_operation.to_dict(),
+            }), code
 
     # 更新用户的最后登录时间和状态
     user.last_login = datetime.now(ZoneInfo("Asia/Shanghai"))
@@ -132,7 +136,7 @@ def login():
     new_operation = handle_operation_success(new_operation, start_time, user.user_id)
 
     current_app.logger.info(
-        f"【登录成功】login_user: {user}, access_token：{access_token}, refresh_token: {refresh_token}")
+        f"【登录成功】login_user: {user}, access_token: {access_token}, refresh_token: {refresh_token}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'login_user': user.to_dict(),
@@ -197,7 +201,7 @@ def refresh():
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【刷新 token 成功】current_user: {current_user}, access_token：{access_token}")
+    current_app.logger.info(f"【刷新 token 成功】current_user: {current_user}, access_token: {access_token}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'access_token': access_token,
@@ -238,7 +242,9 @@ def detail(user_id):
     for condition, message, code in validation_checks:
         if condition:
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'failure_message': message}), code
+            return jsonify({
+                'failure_message': message,
+            }), code
 
     return jsonify({
         'user': user.to_dict(),
@@ -288,7 +294,9 @@ def update():
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'operation': new_operation.to_dict()}), code
+            return jsonify({
+                'operation': new_operation.to_dict(),
+            }), code
 
     # 更新用户信息
     current_user.username = username
@@ -362,7 +370,9 @@ def update_user(user_id):
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'operation': new_operation.to_dict()}), code
+            return jsonify({
+                'operation': new_operation.to_dict(),
+            }), code
 
     # 更新用户信息
     updated_user.username = username
@@ -418,7 +428,9 @@ def change_password():
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'operation': new_operation.to_dict()}), code
+            return jsonify({
+                'operation': new_operation.to_dict(),
+            }), code
 
     # 更新密码
     current_user.password = generate_password_hash(new_password)
@@ -504,7 +516,9 @@ def delete_user(user_id):
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'operation': new_operation.to_dict()}), code
+            return jsonify({
+                'operation': new_operation.to_dict(),
+            }), code
 
     # 软删除用户
     deleted_user.deleted_at = datetime.now(ZoneInfo("Asia/Shanghai"))
@@ -557,7 +571,9 @@ def undelete_user(user_id):
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'operation': new_operation.to_dict()}), code
+            return jsonify({
+                'operation': new_operation.to_dict(),
+            }), code
 
     # 恢复注销用户
     undeleted_user.deleted_at = None
@@ -611,7 +627,9 @@ def ban(user_id):
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'operation': new_operation.to_dict()}), code
+            return jsonify({
+                'operation': new_operation.to_dict(),
+            }), code
 
     # 封禁用户
     baned_user.status = UserStatus.BANNED
@@ -663,7 +681,9 @@ def unban(user_id):
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'operation': new_operation.to_dict()}), code
+            return jsonify({
+                'operation': new_operation.to_dict(),
+            }), code
 
     # 解封用户
     unbaned_user.status = UserStatus.INACTIVE
@@ -695,7 +715,9 @@ def all_users():
     if current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER:
         failure_message = f"【获取所有用户失败】您非管理员/开发人员，权限不足"
         current_app.logger.warning(failure_message + f', operator: {current_user}')
-        return jsonify({'failure_message': failure_message}), 403
+        return jsonify({
+            'failure_message': failure_message,
+        }), 403
 
     # 查询所有用户
     query = User.query
@@ -722,7 +744,7 @@ def get_admin_info():
     # 如果没有管理员，返回 None
     if not admins:
         return jsonify({
-            'admin_info': None
+            'admin_info': None,
         }), 200
 
     # 随机选择一个管理员
@@ -735,12 +757,12 @@ def get_admin_info():
         'phone': random_admin.phone,
         'role': random_admin.role.name,
         'first_name': random_admin.first_name,
-        'last_name': random_admin.last_name
+        'last_name': random_admin.last_name,
     }
 
     # 将单个管理员信息放入列表中返回，保持 API 兼容性
     return jsonify({
-        'admin_info': admin_info
+        'admin_info': admin_info,
     }), 200
 
 
@@ -753,7 +775,7 @@ def get_developer_info():
     # 如果没有开发人员，返回 None
     if not developers:
         return jsonify({
-            'developer_info': None
+            'developer_info': None,
         }), 200
 
     # 随机选择一个开发人员
@@ -766,12 +788,12 @@ def get_developer_info():
         'phone': random_developer.phone,
         'role': random_developer.role.name,
         'first_name': random_developer.first_name,
-        'last_name': random_developer.last_name
+        'last_name': random_developer.last_name,
     }
 
     # 将单个开发人员信息放入列表中返回，保持 API 兼容性
     return jsonify({
-        'developer_info': developer_info
+        'developer_info': developer_info,
     }), 200
 
 
@@ -792,7 +814,7 @@ def statistics():
         'total': total_users,
         'admin': admin_users,
         'developer': developer_users,
-        'user': normal_users
+        'user': normal_users,
     }
 
     return jsonify({

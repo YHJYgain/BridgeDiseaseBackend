@@ -70,7 +70,9 @@ def detection_segmentation():
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.warning(message)
-            return jsonify({'operation': new_operation.to_dict()}), code
+            return jsonify({
+                'operation': new_operation.to_dict(),
+            }), code
 
     # 查找是否已存在相同 owner_id 和 media_id 的检测分割记录
     existing_detection = Detection.query.filter_by(owner_id=current_user_id, media_id=media_id).first()
@@ -86,7 +88,7 @@ def detection_segmentation():
             detection_at=datetime.now(ZoneInfo("Asia/Shanghai")),
             owner_id=current_user_id,
             model_id=model_id,
-            media_id=media_id
+            media_id=media_id,
         )
         db.session.add(new_detection)
     db.session.commit()
@@ -206,7 +208,8 @@ def detection_segmentation():
                 average_shape_complexity,
                 average_texture_roughness,
                 average_crack_width,
-                average_avg_hue, media)
+                average_avg_hue, media,
+            )
 
             # 检测分割结果路径
             result_path = unify_result_media_format(media, current_user)
@@ -264,7 +267,9 @@ def detection_segmentation():
                                  f"Request Method: {request_method}\n"
                                  f"Request URL: {request_url}\n"
                                  f"Request Data: {request_data}")
-        return jsonify({'operation': new_operation.to_dict()}), 500
+        return jsonify({
+            'operation': new_operation.to_dict(),
+        }), 500
 
 
 @detection_routes.route('/detail/<int:detection_id>', methods=['GET'])
@@ -288,7 +293,9 @@ def detail(detection_id):
     for condition, message, code in validation_checks:
         if condition:
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'failure_message': message}), code
+            return jsonify({
+                'failure_message': message,
+            }), code
 
     return jsonify({
         'detection': detection.to_dict(),
@@ -327,7 +334,9 @@ def delete_detection(detection_id):
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'operation': new_operation.to_dict()}), code
+            return jsonify({
+                'operation': new_operation.to_dict(),
+            }), code
 
     # 删除实际文件
     file_abs_path = os.path.join(current_app.root_path, deleted_detection.result_path)
@@ -373,7 +382,9 @@ def user_detections(user_id):
     for condition, message, code in validation_checks:
         if condition:
             current_app.logger.warning(message)
-            return jsonify({'failure_message': message}), code
+            return jsonify({
+                'failure_message': message,
+            }), code
 
     # 获取指定用户检测分割记录
     query = (
@@ -429,7 +440,9 @@ def all_detections():
     if current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER:
         failure_message = f"【获取所有检测分割记录失败】您非管理员/开发人员，权限不足"
         current_app.logger.warning(failure_message)
-        return jsonify({'failure_message': failure_message}), 403
+        return jsonify({
+            'failure_message': failure_message,
+        }), 403
 
     # 获取所有媒体
     query = (
@@ -487,7 +500,7 @@ def statistics():
         'pending': pending_detections,
         'in_progress': in_progress_detections,
         'completed': completed_detections,
-        'failed': failed_detections
+        'failed': failed_detections,
     }
 
     return jsonify({

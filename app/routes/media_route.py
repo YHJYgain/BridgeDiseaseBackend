@@ -51,7 +51,9 @@ def upload():
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'operation': new_operation.to_dict()}), code
+            return jsonify({
+                'operation': new_operation.to_dict(),
+            }), code
 
     # 保存文件到指定目录（返回相对路径）
     file_path = handle_file_upload(media_file, 'medias')
@@ -110,7 +112,9 @@ def detail(media_id):
     for condition, message, code in validation_checks:
         if condition:
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'failure_message': message}), code
+            return jsonify({
+                'failure_message': message,
+            }), code
 
     return jsonify({
         'media': media.to_dict(),
@@ -152,7 +156,9 @@ def update(media_id):
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'operation': new_operation.to_dict()}), code
+            return jsonify({
+                'operation': new_operation.to_dict(),
+            }), code
 
     # 更新媒体信息
     updated_media.description = description if description else updated_media.description
@@ -203,7 +209,9 @@ def delete_media(media_id):
         if condition:
             new_operation = handle_operation_failure(new_operation, start_time, message, current_user_id)
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'operation': new_operation.to_dict()}), code
+            return jsonify({
+                'operation': new_operation.to_dict(),
+            }), code
 
     # 删除实际文件
     file_abs_path = os.path.join(current_app.root_path, deleted_media.media_path)
@@ -248,7 +256,9 @@ def user_medias(user_id):
     for condition, message, code in validation_checks:
         if condition:
             current_app.logger.warning(message + f', operator: {current_user}')
-            return jsonify({'failure_message': message}), code
+            return jsonify({
+                'failure_message': message,
+            }), code
 
     # 获取指定用户媒体
     query = (
@@ -292,7 +302,9 @@ def all_medias():
     if current_user.role != UserRole.ADMIN and current_user.role != UserRole.DEVELOPER:
         failure_message = f"【获取所有媒体失败】您非管理员/开发人员，权限不足"
         current_app.logger.warning(failure_message + f', operator: {current_user}')
-        return jsonify({'failure_message': failure_message}), 403
+        return jsonify({
+            'failure_message': failure_message,
+        }), 403
 
     # 获取所有媒体
     query = (
@@ -336,7 +348,7 @@ def statistics():
     medias_statistics = {
         'total': total_medias,
         'image': image_count,
-        'video': video_count
+        'video': video_count,
     }
 
     return jsonify({
