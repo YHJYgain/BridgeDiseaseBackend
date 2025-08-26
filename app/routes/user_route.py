@@ -26,7 +26,7 @@ def register():
     password = request.form.get('password')
     first_name = request.form.get('first_name', '名字')
     last_name = request.form.get('last_name', '姓氏')
-    role = request.form.get('role', 'user')
+    role = request.form.get('role', 'user').lower()
     avatar_file = request.files.get('avatar_file')
     phone = request.form.get('phone')
 
@@ -322,7 +322,7 @@ def update_user(user_id):
     password = request.form.get('password')
     first_name = request.form.get('first_name')
     last_name = request.form.get('last_name')
-    role = request.form.get('role')
+    role = request.form.get('role').lower()
     avatar_file = request.files.get('avatar_file')
     phone = request.form.get('phone')
 
@@ -371,7 +371,7 @@ def update_user(user_id):
         updated_user.password = generate_password_hash(password)
     updated_user.first_name = first_name if first_name else updated_user.first_name
     updated_user.last_name = last_name if last_name else updated_user.last_name
-    updated_user.role = UserRole(role.lower())
+    updated_user.role = UserRole(role)
     if avatar_file:  # 如果有头像文件，则上传并更新头像路径；如果没有，则说明用户不需要更新头像
         updated_user.avatar_path = handle_file_upload(avatar_file, 'avatars')
     updated_user.phone = phone if phone else updated_user.phone
