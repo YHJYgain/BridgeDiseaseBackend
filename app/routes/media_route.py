@@ -162,7 +162,7 @@ def update(media_id):
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
     current_app.logger.info(
-        f"【更新媒体 ID={media_id} 信息成功】updated_media: {updated_media.to_dict()}, operator: {current_user}")
+        f"【更新媒体 ID={media_id} 信息成功】updated_media: {updated_media}, operator: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'updated_media': updated_media.to_dict(),
@@ -216,7 +216,7 @@ def delete_media(media_id):
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
-    current_app.logger.info(f"【删除媒体 ID={media_id} 成功】deleted_media: {deleted_media.to_dict()}, operator: {current_user}")
+    current_app.logger.info(f"【删除媒体 ID={media_id} 成功】deleted_media: {deleted_media}, operator: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'deleted_media': deleted_media.to_dict(),

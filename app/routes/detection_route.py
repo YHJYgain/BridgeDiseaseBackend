@@ -341,7 +341,7 @@ def delete_detection(detection_id):
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
     current_app.logger.info(
-        f"【删除检测分割 ID={detection_id} 记录成功】deleted_detection: {deleted_detection.to_dict()}, operator: {current_user}")
+        f"【删除检测分割 ID={detection_id} 记录成功】deleted_detection: {deleted_detection}, operator: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'deleted_detection': deleted_detection.to_dict(),

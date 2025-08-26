@@ -202,7 +202,7 @@ def update(model_id):
     # 记录操作
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
     current_app.logger.info(
-        f"【更新模型 ID={model_id} 信息成功】updated_model: {updated_model.to_dict()}, operator: {current_user}")
+        f"【更新模型 ID={model_id} 信息成功】updated_model: {updated_model}, operator: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'updated_model': updated_model.to_dict(),
@@ -256,7 +256,7 @@ def delete_model(model_id):
     new_operation = handle_operation_success(new_operation, start_time, current_user_id)
 
     current_app.logger.info(
-        f"【删除模型 ID={model_id} 成功】deleted_model: {deleted_model.to_dict()}, operator: {current_user}")
+        f"【删除模型 ID={model_id} 成功】deleted_model: {deleted_model}, operator: {current_user}")
     return jsonify({
         'operation': new_operation.to_dict(),
         'deleted_model': deleted_model.to_dict(),

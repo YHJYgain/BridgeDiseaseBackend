@@ -703,7 +703,7 @@ def all_users():
     users = query.paginate(page=page, per_page=per_page, error_out=False)
 
     current_app.logger.info(
-        f"【获取所有用户成功】total: {users_total}, per_page: {per_page}, page: {page}, pages: {pages}, users: {[user.to_dict() for user in users]}, operator: {current_user}")
+        f"【获取所有用户成功】total: {users_total}, per_page: {per_page}, page: {page}, pages: {pages}, users: {users}, operator: {current_user}")
     return jsonify({
         'users': [user.to_dict() for user in users],
         'total': users_total,
