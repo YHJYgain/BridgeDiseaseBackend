@@ -126,9 +126,9 @@ def all_operations():
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
     operations = []
     for operation, owner_username in paginated.items:
-        op = operation.to_dict()
-        op.update({'owner_username': owner_username})
-        operations.append(op)
+        operation_dict = operation.to_dict()
+        operation_dict.update({'owner_username': owner_username})
+        operations.append(operation_dict)
 
     current_app.logger.info(
         f"【获取所有操作成功】total: {operations_total}, per_page: {per_page}, page: {page}, pages: {pages}, operations: {operations}, operator: {current_user}")

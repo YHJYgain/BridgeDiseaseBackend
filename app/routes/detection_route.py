@@ -448,14 +448,14 @@ def all_detections():
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
     detections = []
     for detection, model_name, media_name, media_type, owner_username in paginated.items:
-        d = detection.to_dict()
-        d.update({
+        detection_dict = detection.to_dict()
+        detection_dict.update({
             'model_name': model_name,
             'media_name': media_name,
             'media_type': media_type,
             'owner_username': owner_username,
         })
-        detections.append(d)
+        detections.append(detection_dict)
 
     current_app.logger.info(
         f"【获取所有检测分割记录成功】total: {detections_total}, per_page: {per_page}, page: {page}, pages: {pages}, detections: {detections}, operator: {current_user}")

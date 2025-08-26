@@ -287,9 +287,9 @@ def all_models():
 
     models = []
     for model, owner_username in paginated.items:
-        m = model.to_dict()
-        m.update({'owner_username': owner_username})
-        models.append(m)
+        model_dict = model.to_dict()
+        model_dict.update({'owner_username': owner_username})
+        models.append(model_dict)
 
     current_app.logger.info(
         f"【获取所有模型成功】total: {models_total}, per_page: {per_page}, page: {page}, pages: {pages}, models: {models}, operator: {current_user}")

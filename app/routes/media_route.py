@@ -261,9 +261,9 @@ def user_medias(user_id):
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
     medias = []
     for media, owner_username in paginated.items:
-        m = media.to_dict()
-        m.update({'owner_username': owner_username})
-        medias.append(m)
+        media_dict = media.to_dict()
+        media_dict.update({'owner_username': owner_username})
+        medias.append(media_dict)
 
     current_app.logger.info(
         f"【获取用户 ID={user_id} 媒体成功】total: {medias_total}, per_page: {per_page}, page: {page}, pages: {pages}, medias: {medias}, operator: {current_user}")
@@ -304,9 +304,9 @@ def all_medias():
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
     medias = []
     for media, owner_username in paginated.items:
-        m = media.to_dict()
-        m.update({'owner_username': owner_username})
-        medias.append(m)
+        media_dict = media.to_dict()
+        media_dict.update({'owner_username': owner_username})
+        medias.append(media_dict)
 
     current_app.logger.info(
         f"【获取所有媒体成功】total: {medias_total}, per_page: {per_page}, page: {page}, pages: {pages}, medias: {medias}, operator: {current_user}")
