@@ -128,10 +128,10 @@ def all_operations():
                 'failure_message': message,
             }), code
 
-    # 获取所有操作
+    # 获取所有操作（包括 owner_id 为 NULL 的记录）
     query = (
         Operation.query
-        .join(User, Operation.owner_id == User.user_id)
+        .outerjoin(User, Operation.owner_id == User.user_id)
         .add_columns(User.username.label('owner_username'))
         .order_by(Operation.operation_id.asc())
     )
@@ -140,7 +140,10 @@ def all_operations():
     operations = []
     for operation, owner_username in paginated.items:
         operation_dict = operation.to_dict()
-        operation_dict.update({'owner_username': owner_username})
+        # 如果 owner_id 为 NULL，设置为 0
+        if operation.owner_id is None:
+            operation_dict['owner_id'] = 0
+        operation_dict.update({'owner_username': owner_username or '无'})
         operations.append(operation_dict)
 
     current_app.logger.info(
