@@ -31,6 +31,26 @@
 - Python 3.8+
 - MySQL 5.7+
 
+### 依赖版本
+
+```text
+Flask==3.1.2
+flask_cors==6.0.1
+Flask_JWT_Extended==4.7.1
+flask_sqlalchemy==3.1.1
+moviepy==2.2.1
+numpy==2.3.3
+opencv_python==4.12.0.88
+Pillow==11.3.0
+scikit-image==0.25.2
+SQLAlchemy==2.0.44
+torch==2.8.0
+torchvision==0.23.0
+torchaudio==2.8.0
+ultralytics==8.3.213
+Werkzeug==3.1.3
+```
+
 ### 安装步骤
 
 1. 克隆项目到本地
@@ -121,4 +141,4 @@ SECRET_KEY = 'WZY'  # Flask 密钥，用于签名 cookies 和其他需要加密�
 
 ## 联系方式
 
-如有问题或建议，请联系项目维护者。
+如有问题或建议，请联系项目维护者。 
